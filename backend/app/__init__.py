@@ -19,6 +19,9 @@ def create_app(config_name='default'):
                 static_folder='../../frontend')
     app.config.from_object(config[config_name])
     
+    # Initialize configuration
+    config[config_name].init_app(app)
+    
     # JWT Configuration
     app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # 1 hour
