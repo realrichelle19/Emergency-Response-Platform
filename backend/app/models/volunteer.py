@@ -15,6 +15,14 @@ class VolunteerProfile(db.Model):
                                           name='availability_statuses'), 
                                   default='offline', index=True)
     bio = db.Column(db.Text)
+    interests = db.Column(db.Text)  # JSON string of interests
+    experience_level = db.Column(db.Enum('beginner', 'intermediate', 'advanced', 'expert', 
+                                       name='experience_levels'), default='beginner')
+    languages_spoken = db.Column(db.Text)  # JSON string of languages
+    emergency_contact_name = db.Column(db.String(200))
+    emergency_contact_phone = db.Column(db.String(20))
+    background_check_status = db.Column(db.Enum('not_required', 'pending', 'approved', 'rejected',
+                                               name='background_check_statuses'), default='not_required')
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
@@ -47,6 +55,43 @@ class VolunteerProfile(db.Model):
     def pending_skills(self):
         """Get list of skills pending verification."""
         return [vs for vs in self.volunteer_skills if vs.verification_status == 'pending']
+    
+    @property
+    def rejected_skills(self):
+        """Get list of rejected skills."""
+        return [vs for vs in self.volunteer_skills if vs.verification_status == 'rejected']
+    
+    @property
+    def interests_list(self):
+        """Get interests as a list."""
+        if self.interests:
+            import json
+            try:
+                return json.loads(self.interests)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    @property
+    def languages_list(self):
+        """Get languages as a list."""
+        if self.languages_spoken:
+            import json
+            try:
+                return json.loads(self.languages_spoken)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    def set_interests(self, interests_list):
+        """Set interests from a list."""
+        import json
+        self.interests = json.dumps(interests_list) if interests_list else None
+    
+    def set_languages(self, languages_list):
+        """Set languages from a list."""
+        import json
+        self.languages_spoken = json.dumps(languages_list) if languages_list else None
     
     @property
     def rejected_skills(self):

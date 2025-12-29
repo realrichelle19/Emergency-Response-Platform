@@ -26,8 +26,17 @@ class VolunteerService:
                 longitude=profile_data.get('longitude'),
                 city=profile_data.get('city'),
                 availability_status=profile_data.get('availability_status', 'offline'),
-                bio=profile_data.get('bio')
+                bio=profile_data.get('bio'),
+                experience_level=profile_data.get('experience_level', 'beginner'),
+                emergency_contact_name=profile_data.get('emergency_contact_name'),
+                emergency_contact_phone=profile_data.get('emergency_contact_phone')
             )
+            
+            # Set interests and languages if provided
+            if 'interests' in profile_data:
+                profile.set_interests(profile_data['interests'])
+            if 'languages_spoken' in profile_data:
+                profile.set_languages(profile_data['languages_spoken'])
             
             db.session.add(profile)
             db.session.commit()
@@ -61,6 +70,17 @@ class VolunteerService:
                 profile.city = profile_data['city']
             if 'bio' in profile_data:
                 profile.bio = profile_data['bio']
+            if 'interests' in profile_data:
+                profile.set_interests(profile_data['interests'])
+            if 'experience_level' in profile_data:
+                if profile_data['experience_level'] in ['beginner', 'intermediate', 'advanced', 'expert']:
+                    profile.experience_level = profile_data['experience_level']
+            if 'languages_spoken' in profile_data:
+                profile.set_languages(profile_data['languages_spoken'])
+            if 'emergency_contact_name' in profile_data:
+                profile.emergency_contact_name = profile_data['emergency_contact_name']
+            if 'emergency_contact_phone' in profile_data:
+                profile.emergency_contact_phone = profile_data['emergency_contact_phone']
             
             profile.updated_at = datetime.now(timezone.utc)
             db.session.commit()

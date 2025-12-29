@@ -122,8 +122,20 @@ class EmergencyAPI {
         return API.get(`/emergencies/${id}`);
     }
 
+    static async updateEmergency(id, updateData) {
+        return API.put(`/emergencies/${id}/update`, updateData);
+    }
+
     static async escalateEmergency(id) {
         return API.post(`/emergencies/${id}/escalate`);
+    }
+
+    static async completeEmergency(id) {
+        return API.post(`/emergencies/${id}/complete`);
+    }
+
+    static async cancelEmergency(id) {
+        return API.post(`/emergencies/${id}/cancel`);
     }
 }
 
@@ -182,6 +194,10 @@ class VolunteerAPI {
         return API.post('/volunteers/skills', { skill_id: skillId });
     }
 
+    static async removeSkill(skillId) {
+        return API.delete(`/volunteers/skills/${skillId}`);
+    }
+
     static async getAssignments(status = '') {
         const params = status ? { status } : {};
         return API.get('/volunteers/assignments', params);
@@ -196,6 +212,38 @@ class VolunteerAPI {
 
     static async completeAssignment(assignmentId, notes = '') {
         return API.put(`/volunteers/assignments/${assignmentId}/complete`, { notes });
+    }
+
+    static async getInterests() {
+        return API.get('/volunteers/interests');
+    }
+
+    static async updateInterests(interests) {
+        return API.put('/volunteers/interests', { interests });
+    }
+
+    static async getLanguages() {
+        return API.get('/volunteers/languages');
+    }
+
+    static async updateLanguages(languages) {
+        return API.put('/volunteers/languages', { languages });
+    }
+
+    static async updateExperience(experienceLevel) {
+        return API.put('/volunteers/experience', { experience_level: experienceLevel });
+    }
+
+    static async updateEmergencyContact(name, phone) {
+        return API.put('/volunteers/emergency-contact', { name, phone });
+    }
+
+    static async getNearbyEmergencies(radius = 25) {
+        return API.get(`/volunteers/nearby-emergencies?radius=${radius}`);
+    }
+
+    static async getStats() {
+        return API.get('/volunteers/stats');
     }
 }
 
@@ -231,6 +279,37 @@ class SystemAPI {
     }
 }
 
+// Add Authority API class
+class AuthorityAPI {
+    static async getDashboardStats() {
+        return API.get('/authority/dashboard/stats');
+    }
+
+    static async getEmergencies(params = {}) {
+        return EmergencyAPI.getEmergencies(params);
+    }
+
+    static async createEmergency(emergencyData) {
+        return EmergencyAPI.createEmergency(emergencyData);
+    }
+
+    static async updateEmergency(id, updateData) {
+        return EmergencyAPI.updateEmergency(id, updateData);
+    }
+
+    static async completeEmergency(id) {
+        return EmergencyAPI.completeEmergency(id);
+    }
+
+    static async cancelEmergency(id) {
+        return EmergencyAPI.cancelEmergency(id);
+    }
+
+    static async escalateEmergency(id) {
+        return EmergencyAPI.escalateEmergency(id);
+    }
+}
+
 // Export APIs
 window.API = API;
 window.AuthAPI = AuthAPI;
@@ -238,5 +317,6 @@ window.EmergencyAPI = EmergencyAPI;
 window.AssignmentAPI = AssignmentAPI;
 window.SkillsAPI = SkillsAPI;
 window.VolunteerAPI = VolunteerAPI;
+window.AuthorityAPI = AuthorityAPI;
 window.AdminAPI = AdminAPI;
 window.SystemAPI = SystemAPI;

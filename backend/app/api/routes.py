@@ -10,8 +10,28 @@ from flask_login import login_required, current_user
 from app.api import bp
 from app.services.realtime_service import RealtimeService
 from app.auth.utils import require_role, require_roles
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
+
+def parse_datetime_param(datetime_str):
+    """Parse datetime parameter with proper timezone handling."""
+    if not datetime_str:
+        return None
+    
+    try:
+        # Handle both ISO format with and without timezone
+        if datetime_str.endswith('Z'):
+            datetime_str = datetime_str[:-1] + '+00:00'
+        
+        parsed_dt = datetime.fromisoformat(datetime_str)
+        
+        # Ensure timezone awareness
+        if parsed_dt.tzinfo is None:
+            parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
+        
+        return parsed_dt
+    except ValueError:
+        return None
 
 @bp.route('/status')
 def status():
@@ -19,7 +39,7 @@ def status():
     return {
         "status": "API ready", 
         "version": "1.0",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @bp.route('/health')
@@ -32,7 +52,7 @@ def health():
         return jsonify({
             'error': 'Health check failed',
             'message': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500
 
 # Real-time update endpoints
@@ -43,13 +63,10 @@ def volunteer_updates():
     """Get real-time updates for volunteer users."""
     try:
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return jsonify({'error': 'Invalid timestamp format'}), 400
+        if last_update and last_update_time is None:
+            return jsonify({'error': 'Invalid timestamp format'}), 400
         
         updates = RealtimeService.get_volunteer_updates(current_user, last_update_time)
         return jsonify(updates)
@@ -59,7 +76,7 @@ def volunteer_updates():
         return jsonify({
             'error': 'Failed to get updates',
             'message': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500
 
 @bp.route('/updates/authority')
@@ -69,13 +86,10 @@ def authority_updates():
     """Get real-time updates for authority users."""
     try:
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return jsonify({'error': 'Invalid timestamp format'}), 400
+        if last_update and last_update_time is None:
+            return jsonify({'error': 'Invalid timestamp format'}), 400
         
         updates = RealtimeService.get_authority_updates(current_user, last_update_time)
         return jsonify(updates)
@@ -85,7 +99,7 @@ def authority_updates():
         return jsonify({
             'error': 'Failed to get updates',
             'message': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500
 
 @bp.route('/updates/admin')
@@ -95,13 +109,10 @@ def admin_updates():
     """Get real-time updates for admin users."""
     try:
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return jsonify({'error': 'Invalid timestamp format'}), 400
+        if last_update and last_update_time is None:
+            return jsonify({'error': 'Invalid timestamp format'}), 400
         
         updates = RealtimeService.get_admin_updates(current_user, last_update_time)
         return jsonify(updates)
@@ -111,7 +122,7 @@ def admin_updates():
         return jsonify({
             'error': 'Failed to get updates',
             'message': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500
 
 # System monitoring endpoints
@@ -141,7 +152,7 @@ def trigger_escalations():
         return jsonify({
             'escalated_emergencies': escalated_ids,
             'count': len(escalated_ids),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         })
         
     except Exception as e:
@@ -185,13 +196,10 @@ def long_poll():
     try:
         timeout = min(int(request.args.get('timeout', 30)), 60)  # Max 60 seconds
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return jsonify({'error': 'Invalid timestamp format'}), 400
+        if last_update and last_update_time is None:
+            return jsonify({'error': 'Invalid timestamp format'}), 400
         
         # Get updates based on user role
         if current_user.role == 'volunteer':
@@ -226,5 +234,5 @@ def long_poll():
         return jsonify({
             'error': 'Polling failed',
             'message': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }), 500

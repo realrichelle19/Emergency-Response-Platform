@@ -13,6 +13,14 @@ class EmergencyRequest(db.Model):
     latitude = db.Column(db.Numeric(10, 8), nullable=False)
     longitude = db.Column(db.Numeric(11, 8), nullable=False)
     address = db.Column(db.String(500))
+    incident_type = db.Column(db.String(100))  # Fire, Flood, Earthquake, etc.
+    estimated_duration_hours = db.Column(db.Integer)
+    hazard_level = db.Column(db.Enum('low', 'medium', 'high', 'extreme', 
+                                   name='hazard_levels'), default='medium')
+    weather_conditions = db.Column(db.String(200))
+    special_instructions = db.Column(db.Text)
+    media_contact_allowed = db.Column(db.Boolean, default=False)
+    authority_contact_info = db.Column(db.Text)  # JSON string with contact details
     priority_level = db.Column(db.Enum('low', 'medium', 'high', 'critical', 
                                      name='priority_levels'), nullable=False)
     status = db.Column(db.Enum('open', 'assigned', 'completed', 'cancelled', 

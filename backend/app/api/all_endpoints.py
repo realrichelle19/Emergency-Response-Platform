@@ -233,13 +233,10 @@ def volunteer_updates():
             
         user = get_current_user()
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return api_response(error='Invalid timestamp format', status=400)
+        if last_update and last_update_time is None:
+            return api_response(error='Invalid timestamp format', status=400)
         
         updates = RealtimeService.get_volunteer_updates(user, last_update_time)
         return api_response(updates)
@@ -259,13 +256,10 @@ def authority_updates():
             
         user = get_current_user()
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return api_response(error='Invalid timestamp format', status=400)
+        if last_update and last_update_time is None:
+            return api_response(error='Invalid timestamp format', status=400)
         
         updates = RealtimeService.get_authority_updates(user, last_update_time)
         return api_response(updates)
@@ -285,13 +279,10 @@ def admin_updates():
             
         user = get_current_user()
         last_update = request.args.get('since')
-        last_update_time = None
+        last_update_time = parse_datetime_param(last_update)
         
-        if last_update:
-            try:
-                last_update_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
-            except ValueError:
-                return api_response(error='Invalid timestamp format', status=400)
+        if last_update and last_update_time is None:
+            return api_response(error='Invalid timestamp format', status=400)
         
         updates = RealtimeService.get_admin_updates(user, last_update_time)
         return api_response(updates)
@@ -303,6 +294,26 @@ def admin_updates():
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
+
+def parse_datetime_param(datetime_str):
+    """Parse datetime parameter with proper timezone handling."""
+    if not datetime_str:
+        return None
+    
+    try:
+        # Handle both ISO format with and without timezone
+        if datetime_str.endswith('Z'):
+            datetime_str = datetime_str[:-1] + '+00:00'
+        
+        parsed_dt = datetime.fromisoformat(datetime_str)
+        
+        # Ensure timezone awareness
+        if parsed_dt.tzinfo is None:
+            parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
+        
+        return parsed_dt
+    except ValueError:
+        return None
 
 def require_role(required_role):
     """Check if current user has required role."""
@@ -1067,6 +1078,383 @@ def get_system_stats():
         }
         
         return api_response(stats)
+        
+    except Exception as e:
+        return api_response(error=str(e), status=500)
+
+# ============================================================================
+# VOLUNTEER INTERESTS AND CERTIFICATIONS API
+# ============================================================================
+
+@bp.route('/volunteers/interests', methods=['GET'])
+@jwt_required()
+def get_volunteer_interests():
+    """Get volunteer interests."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        interests = user.volunteer_profile.interests_list
+        
+        return api_response({'interests': interests})
+        
+    except Exception as e:
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/interests', methods=['PUT'])
+@jwt_required()
+def update_volunteer_interests():
+    """Update volunteer interests."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        data = request.get_json()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        interests = data.get('interests', [])
+        if not isinstance(interests, list):
+            return api_response(error='Interests must be a list', status=400)
+        
+        user.volunteer_profile.set_interests(interests)
+        db.session.commit()
+        
+        return api_response(message='Interests updated successfully')
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/languages', methods=['GET'])
+@jwt_required()
+def get_volunteer_languages():
+    """Get volunteer languages."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        languages = user.volunteer_profile.languages_list
+        
+        return api_response({'languages': languages})
+        
+    except Exception as e:
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/languages', methods=['PUT'])
+@jwt_required()
+def update_volunteer_languages():
+    """Update volunteer languages."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        data = request.get_json()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        languages = data.get('languages', [])
+        if not isinstance(languages, list):
+            return api_response(error='Languages must be a list', status=400)
+        
+        user.volunteer_profile.set_languages(languages)
+        db.session.commit()
+        
+        return api_response(message='Languages updated successfully')
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/experience', methods=['PUT'])
+@jwt_required()
+def update_volunteer_experience():
+    """Update volunteer experience level."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        data = request.get_json()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        experience_level = data.get('experience_level')
+        if experience_level not in ['beginner', 'intermediate', 'advanced', 'expert']:
+            return api_response(error='Invalid experience level', status=400)
+        
+        user.volunteer_profile.experience_level = experience_level
+        db.session.commit()
+        
+        return api_response(message='Experience level updated successfully')
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/emergency-contact', methods=['PUT'])
+@jwt_required()
+def update_emergency_contact():
+    """Update volunteer emergency contact."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        data = request.get_json()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        user.volunteer_profile.emergency_contact_name = data.get('name')
+        user.volunteer_profile.emergency_contact_phone = data.get('phone')
+        db.session.commit()
+        
+        return api_response(message='Emergency contact updated successfully')
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/nearby-emergencies', methods=['GET'])
+@jwt_required()
+def get_nearby_emergencies():
+    """Get nearby emergencies for volunteer."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        radius = request.args.get('radius', 25, type=int)
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        from app.volunteer.services import VolunteerService
+        emergencies = VolunteerService.get_nearby_emergencies(user, radius)
+        
+        return api_response({
+            'emergencies': [
+                e[0].to_dict(include_authority=True, include_skills=True) if isinstance(e, tuple) 
+                else e.to_dict(include_authority=True, include_skills=True)
+                for e in emergencies
+            ],
+            'radius_km': radius
+        })
+        
+    except Exception as e:
+        return api_response(error=str(e), status=500)
+
+@bp.route('/volunteers/stats', methods=['GET'])
+@jwt_required()
+def get_volunteer_stats():
+    """Get volunteer statistics."""
+    try:
+        role_check = require_role('volunteer')
+        if role_check:
+            return role_check
+            
+        user = get_current_user()
+        
+        if not user or not user.volunteer_profile:
+            return api_response(error='Volunteer profile not found', status=404)
+        
+        from app.volunteer.services import VolunteerService
+        stats = VolunteerService.get_volunteer_stats(user)
+        
+        return api_response({'stats': stats})
+        
+    except Exception as e:
+        return api_response(error=str(e), status=500)
+
+# ============================================================================
+# AUTHORITY ENHANCED API
+# ============================================================================
+
+@bp.route('/emergencies/<int:emergency_id>/update', methods=['PUT'])
+@jwt_required()
+def update_emergency(emergency_id):
+    """Update emergency details."""
+    try:
+        role_check = require_role('authority')
+        if role_check:
+            return role_check
+        
+        user = get_current_user()
+        data = request.get_json()
+        
+        emergency = EmergencyRequest.query.get(emergency_id)
+        if not emergency:
+            return api_response(error='Emergency not found', status=404)
+        
+        if emergency.authority_id != user.id:
+            return api_response(error='Access denied', status=403)
+        
+        # Update allowed fields
+        if 'incident_type' in data:
+            emergency.incident_type = data['incident_type']
+        if 'estimated_duration_hours' in data:
+            emergency.estimated_duration_hours = data['estimated_duration_hours']
+        if 'hazard_level' in data:
+            if data['hazard_level'] in ['low', 'medium', 'high', 'extreme']:
+                emergency.hazard_level = data['hazard_level']
+        if 'weather_conditions' in data:
+            emergency.weather_conditions = data['weather_conditions']
+        if 'special_instructions' in data:
+            emergency.special_instructions = data['special_instructions']
+        if 'media_contact_allowed' in data:
+            emergency.media_contact_allowed = bool(data['media_contact_allowed'])
+        
+        emergency.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        return api_response(
+            emergency.to_dict(include_authority=True, include_skills=True),
+            'Emergency updated successfully'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/emergencies/<int:emergency_id>/complete', methods=['POST'])
+@jwt_required()
+def complete_emergency(emergency_id):
+    """Mark emergency as completed."""
+    try:
+        user = get_current_user()
+        claims = get_jwt()
+        
+        if claims.get('role') not in ['authority', 'admin']:
+            return api_response(error='Authority or admin role required', status=403)
+        
+        emergency = EmergencyRequest.query.get(emergency_id)
+        if not emergency:
+            return api_response(error='Emergency not found', status=404)
+        
+        if claims.get('role') == 'authority' and emergency.authority_id != user.id:
+            return api_response(error='Access denied', status=403)
+        
+        emergency.status = 'completed'
+        emergency.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        return api_response(
+            emergency.to_dict(include_authority=True, include_skills=True),
+            'Emergency marked as completed'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/emergencies/<int:emergency_id>/cancel', methods=['POST'])
+@jwt_required()
+def cancel_emergency(emergency_id):
+    """Cancel emergency."""
+    try:
+        user = get_current_user()
+        claims = get_jwt()
+        
+        if claims.get('role') not in ['authority', 'admin']:
+            return api_response(error='Authority or admin role required', status=403)
+        
+        emergency = EmergencyRequest.query.get(emergency_id)
+        if not emergency:
+            return api_response(error='Emergency not found', status=404)
+        
+        if claims.get('role') == 'authority' and emergency.authority_id != user.id:
+            return api_response(error='Access denied', status=403)
+        
+        emergency.status = 'cancelled'
+        emergency.updated_at = datetime.now(timezone.utc)
+        
+        # Cancel all pending assignments
+        for assignment in emergency.assignments:
+            if assignment.status == 'requested':
+                assignment.status = 'cancelled'
+        
+        db.session.commit()
+        
+        return api_response(
+            emergency.to_dict(include_authority=True, include_skills=True),
+            'Emergency cancelled successfully'
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        return api_response(error=str(e), status=500)
+
+@bp.route('/authority/dashboard/stats', methods=['GET'])
+@jwt_required()
+def get_authority_dashboard_stats():
+    """Get authority dashboard statistics."""
+    try:
+        role_check = require_role('authority')
+        if role_check:
+            return role_check
+        
+        user = get_current_user()
+        
+        # Get authority's emergency statistics
+        total_emergencies = EmergencyRequest.query.filter_by(authority_id=user.id).count()
+        open_emergencies = EmergencyRequest.query.filter_by(
+            authority_id=user.id, status='open'
+        ).count()
+        completed_emergencies = EmergencyRequest.query.filter_by(
+            authority_id=user.id, status='completed'
+        ).count()
+        
+        # Get assignment statistics for authority's emergencies
+        authority_emergency_ids = [e.id for e in EmergencyRequest.query.filter_by(
+            authority_id=user.id
+        ).all()]
+        
+        if authority_emergency_ids:
+            pending_assignments = Assignment.query.filter(
+                Assignment.emergency_id.in_(authority_emergency_ids),
+                Assignment.status == 'requested'
+            ).count()
+            
+            active_assignments = Assignment.query.filter(
+                Assignment.emergency_id.in_(authority_emergency_ids),
+                Assignment.status == 'accepted'
+            ).count()
+        else:
+            pending_assignments = 0
+            active_assignments = 0
+        
+        stats = {
+            'total_emergencies': total_emergencies,
+            'open_emergencies': open_emergencies,
+            'completed_emergencies': completed_emergencies,
+            'pending_assignments': pending_assignments,
+            'active_assignments': active_assignments
+        }
+        
+        return api_response({'stats': stats})
         
     except Exception as e:
         return api_response(error=str(e), status=500)
