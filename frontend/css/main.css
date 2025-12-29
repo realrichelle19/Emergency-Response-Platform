@@ -1,0 +1,248 @@
+/* Emergency Response Platform - Main Styles */
+
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--dark-color);
+}
+
+/* Navigation */
+.navbar-brand {
+    font-weight: 700;
+}
+
+/* Cards */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Buttons */
+.btn {
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+}
+
+/* Status badges */
+.status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.status-open { background-color: var(--info-color); color: white; }
+.status-assigned { background-color: var(--warning-color); color: var(--dark-color); }
+.status-completed { background-color: var(--success-color); color: white; }
+.status-cancelled { background-color: var(--danger-color); color: white; }
+
+.status-available { background-color: var(--success-color); color: white; }
+.status-busy { background-color: var(--warning-color); color: var(--dark-color); }
+.status-offline { background-color: var(--light-color); color: var(--dark-color); border: 1px solid #dee2e6; }
+
+.status-pending { background-color: var(--warning-color); color: var(--dark-color); }
+.status-verified { background-color: var(--success-color); color: white; }
+.status-rejected { background-color: var(--danger-color); color: white; }
+
+/* Priority indicators */
+.priority-low { border-left: 4px solid var(--info-color); }
+.priority-medium { border-left: 4px solid var(--warning-color); }
+.priority-high { border-left: 4px solid var(--danger-color); }
+.priority-critical { border-left: 4px solid #dc3545; background-color: #fff5f5; }
+
+/* Forms */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Emergency request cards */
+.emergency-card {
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.emergency-card.priority-critical {
+    border-left-color: var(--danger-color);
+    background-color: #fff5f5;
+}
+
+.emergency-card.priority-high {
+    border-left-color: var(--danger-color);
+}
+
+.emergency-card.priority-medium {
+    border-left-color: var(--warning-color);
+}
+
+.emergency-card.priority-low {
+    border-left-color: var(--info-color);
+}
+
+/* Volunteer cards */
+.volunteer-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.volunteer-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.volunteer-card.selected {
+    border-color: var(--primary-color);
+    background-color: #f8f9ff;
+}
+
+/* Distance indicator */
+.distance-badge {
+    background-color: var(--light-color);
+    color: var(--dark-color);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    border: 1px solid #dee2e6;
+}
+
+/* Skill tags */
+.skill-tag {
+    display: inline-block;
+    background-color: var(--light-color);
+    color: var(--dark-color);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    margin: 0.125rem;
+    border: 1px solid #dee2e6;
+}
+
+.skill-tag.verified {
+    background-color: var(--success-color);
+    color: white;
+    border-color: var(--success-color);
+}
+
+.skill-tag.pending {
+    background-color: var(--warning-color);
+    color: var(--dark-color);
+    border-color: var(--warning-color);
+}
+
+.skill-tag.rejected {
+    background-color: var(--danger-color);
+    color: white;
+    border-color: var(--danger-color);
+}
+
+/* Dashboard stats */
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card.primary { background: linear-gradient(135deg, var(--primary-color), #0a58ca); }
+.stat-card.success { background: linear-gradient(135deg, var(--success-color), #146c43); }
+.stat-card.warning { background: linear-gradient(135deg, var(--warning-color), #e0a800); }
+.stat-card.danger { background: linear-gradient(135deg, var(--danger-color), #b02a37); }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .emergency-card,
+    .volunteer-card {
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-card h3 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Animation for real-time updates */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.updating {
+    animation: pulse 1s infinite;
+}
+
+/* Map container */
+.map-container {
+    height: 400px;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Utility classes */
+.text-muted-light {
+    color: #6c757d !important;
+}
+
+.border-start-primary {
+    border-left: 4px solid var(--primary-color) !important;
+}
+
+.border-start-success {
+    border-left: 4px solid var(--success-color) !important;
+}
+
+.border-start-warning {
+    border-left: 4px solid var(--warning-color) !important;
+}
+
+.border-start-danger {
+    border-left: 4px solid var(--danger-color) !important;
+}

@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Assignments{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Volunteer Assignments</h1>
+                <div>
+                    <a href="{{ url_for('authority.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('authority.list_assignments') }}" 
+                           class="btn btn-sm {{ 'btn-primary' if not status_filter else 'btn-outline-primary' }}">
+                            All Assignments
+                        </a>
+                        <a href="{{ url_for('authority.list_assignments', status='requested') }}" 
+                           class="btn btn-sm {{ 'btn-warning' if status_filter == 'requested' else 'btn-outline-warning' }}">
+                            Pending
+                        </a>
+                        <a href="{{ url_for('authority.list_assignments', status='accepted') }}" 
+                           class="btn btn-sm {{ 'btn-info' if status_filter == 'accepted' else 'btn-outline-info' }}">
+                            Active
+                        </a>
+                        <a href="{{ url_for('authority.list_assignments', status='completed') }}" 
+                           class="btn btn-sm {{ 'btn-success' if status_filter == 'completed' else 'btn-outline-success' }}">
+                            Completed
+                        </a>
+                        <a href="{{ url_for('authority.list_assignments', status='declined') }}" 
+                           class="btn btn-sm {{ 'btn-secondary' if status_filter == 'declined' else 'btn-outline-secondary' }}">
+                            Declined
+                        </a>
+                        <a href="{{ url_for('authority.list_assignments', status='cancelled') }}" 
+                           class="btn btn-sm {{ 'btn-dark' if status_filter == 'cancelled' else 'btn-outline-dark' }}">
+                            Cancelled
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignments List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        {% if status_filter %}
+                            {{ status_filter.title() }} Assignments
+                        {% else %}
+                            All Assignments
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if assignments and assignments.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Emergency</th>
+                                        <th>Volunteer</th>
+                                        <th>Status</th>
+                                        <th>Assigned</th>
+                                        <th>Response Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for assignment in assignments.items %}
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <a href="{{ url_for('authority.view_emergency', emergency_id=assignment.emergency_id) }}" 
+                                                   class="text-decoration-none fw-bold">
+                                                    {{ assignment.emergency_request.title }}
+                                                </a>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <span class="badge badge-{{ 'danger' if assignment.emergency_request.priority_level == 'critical' 
+                                                                              else 'warning' if assignment.emergency_request.priority_level == 'high'
+                                                                              else 'info' if assignment.emergency_request.priority_level == 'medium'
+                                                                              else 'secondary' }}">
+                                                        {{ assignment.emergency_request.priority_level.title() }}
+                                                    </span>
+                                                </small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ assignment.volunteer_profile.user.full_name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ assignment.volunteer_profile.user.email }}</small>
+                                                {% if assignment.volunteer_profile.user.phone %}
+                                                <br>
+                                                <small class="text-muted">{{ assignment.volunteer_profile.user.phone }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'warning' if assignment.status == 'requested'
+                                                                      else 'info' if assignment.status == 'accepted'
+                                                                      else 'success' if assignment.status == 'completed'
+                                                                      else 'secondary' if assignment.status == 'declined'
+                                                                      else 'dark' }}">
+                                                {{ assignment.status.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small>{{ assignment.assigned_at.strftime('%m/%d/%Y %H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            {% if assignment.response_time_minutes %}
+                                                <small>{{ assignment.response_time_minutes }} min</small>
+                                            {% else %}
+                                                <small class="text-muted">-</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('authority.view_emergency', emergency_id=assignment.emergency_id) }}" 
+                                                   class="btn btn-outline-primary btn-sm" title="View Emergency">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if assignment.status == 'requested' %}
+                                                <button class="btn btn-outline-danger btn-sm" 
+                                                        onclick="cancelAssignment({{ assignment.id }})" title="Cancel Assignment">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if assignments.pages > 1 %}
+                        <nav aria-label="Assignments pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if assignments.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('authority.list_assignments', page=assignments.prev_num, status=status_filter) }}">
+                                        Previous
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for page_num in assignments.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != assignments.page %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('authority.list_assignments', page=page_num, status=status_filter) }}">
+                                                {{ page_num }}
+                                            </a>
+                                        </li>
+                                        {% else %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                        {% endif %}
+                                    {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if assignments.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('authority.list_assignments', page=assignments.next_num, status=status_filter) }}">
+                                        Next
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">
+                                {% if status_filter %}
+                                    No {{ status_filter }} assignments found
+                                {% else %}
+                                    No assignments yet
+                                {% endif %}
+                            </h5>
+                            <p class="text-muted">
+                                {% if status_filter %}
+                                    Try selecting a different status filter.
+                                {% else %}
+                                    Create emergency requests to start getting volunteer assignments.
+                                {% endif %}
+                            </p>
+                            <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                                Create Emergency
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Assignment Modal -->
+<div class="modal fade" id="cancelAssignmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this assignment? The volunteer will be notified.</p>
+                <form id="cancelAssignmentForm" method="POST">
+                    <div class="mb-3">
+                        <label for="cancelReason" class="form-label">Reason (optional)</label>
+                        <textarea class="form-control" id="cancelReason" name="reason" rows="3"
+                                  placeholder="Explain why this assignment is being cancelled..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmCancelAssignment()">
+                    Cancel Assignment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let assignmentToCancel = null;
+
+function cancelAssignment(assignmentId) {
+    assignmentToCancel = assignmentId;
+    const modal = new bootstrap.Modal(document.getElementById('cancelAssignmentModal'));
+    modal.show();
+}
+
+function confirmCancelAssignment() {
+    if (!assignmentToCancel) return;
+    
+    const form = document.getElementById('cancelAssignmentForm');
+    const reason = document.getElementById('cancelReason').value;
+    
+    // Create a temporary form to submit the cancellation
+    const tempForm = document.createElement('form');
+    tempForm.method = 'POST';
+    tempForm.action = `/authority/assignment/${assignmentToCancel}/cancel`;
+    
+    const reasonInput = document.createElement('input');
+    reasonInput.type = 'hidden';
+    reasonInput.name = 'reason';
+    reasonInput.value = reason;
+    tempForm.appendChild(reasonInput);
+    
+    document.body.appendChild(tempForm);
+    tempForm.submit();
+}
+
+// Auto-refresh assignments every 30 seconds
+setInterval(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

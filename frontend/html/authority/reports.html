@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Reports & Analytics</h1>
+                <div>
+                    <div class="btn-group">
+                        <a href="{{ url_for('authority.reports', days=7) }}" 
+                           class="btn btn-sm {{ 'btn-primary' if date_range.days == 7 else 'btn-outline-primary' }}">
+                            7 Days
+                        </a>
+                        <a href="{{ url_for('authority.reports', days=30) }}" 
+                           class="btn btn-sm {{ 'btn-primary' if date_range.days == 30 else 'btn-outline-primary' }}">
+                            30 Days
+                        </a>
+                        <a href="{{ url_for('authority.reports', days=90) }}" 
+                           class="btn btn-sm {{ 'btn-primary' if date_range.days == 90 else 'btn-outline-primary' }}">
+                            90 Days
+                        </a>
+                    </div>
+                    <a href="{{ url_for('authority.dashboard') }}" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Range Info -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-calendar-alt"></i>
+                <strong>Report Period:</strong> 
+                {{ date_range.start_date.strftime('%B %d, %Y') }} - {{ date_range.end_date.strftime('%B %d, %Y') }}
+                ({{ date_range.days }} days)
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ emergency_stats.get('total', 0) }}</h4>
+                            <p class="card-text">Total Emergencies</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ assignment_stats.get('total_assignments', 0) }}</h4>
+                            <p class="card-text">Total Assignments</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ performance_metrics.get('acceptance_rate', 0) }}%</h4>
+                            <p class="card-text">Acceptance Rate</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ performance_metrics.get('average_response_time_minutes', 0) }}</h4>
+                            <p class="card-text">Avg Response (min)</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Emergency Status Breakdown -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Emergency Status Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    {% if emergency_stats.get('status_breakdown') %}
+                        <canvas id="statusChart" width="400" height="200"></canvas>
+                        <div class="mt-3">
+                            {% for status, count in emergency_stats.get('status_breakdown', {}).items() %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-capitalize">
+                                    <span class="badge badge-{{ 'success' if status == 'completed'
+                                                              else 'info' if status == 'assigned'
+                                                              else 'warning' if status == 'open'
+                                                              else 'secondary' }}">
+                                        {{ status.title() }}
+                                    </span>
+                                </span>
+                                <span><strong>{{ count }}</strong></span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No emergency data for this period</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Level Breakdown -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Priority Level Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% if emergency_stats.get('priority_breakdown') %}
+                        <canvas id="priorityChart" width="400" height="200"></canvas>
+                        <div class="mt-3">
+                            {% for priority, count in emergency_stats.get('priority_breakdown', {}).items() %}
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-capitalize">
+                                    <span class="badge badge-{{ 'danger' if priority == 'critical'
+                                                              else 'warning' if priority == 'high'
+                                                              else 'info' if priority == 'medium'
+                                                              else 'secondary' }}">
+                                        {{ priority.title() }}
+                                    </span>
+                                </span>
+                                <span><strong>{{ count }}</strong></span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No priority data for this period</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Performance -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Assignment Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="assignmentChart" width="600" height="300"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Assignment Statistics</h6>
+                            <div class="mb-3">
+                                {% for status, count in assignment_stats.items() %}
+                                    {% if status != 'total_assignments' %}
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-capitalize">{{ status.replace('_', ' ') }}</span>
+                                        <span class="badge badge-secondary">{{ count }}</span>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            
+                            <h6>Performance Metrics</h6>
+                            <div class="mb-2">
+                                <small class="text-muted">Acceptance Rate</small>
+                                <div class="progress mb-1">
+                                    <div class="progress-bar bg-success" style="width: {{ performance_metrics.get('acceptance_rate', 0) }}%"></div>
+                                </div>
+                                <small>{{ performance_metrics.get('acceptance_rate', 0) }}%</small>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">Completion Rate</small>
+                                <div class="progress mb-1">
+                                    <div class="progress-bar bg-info" style="width: {{ performance_metrics.get('completion_rate', 0) }}%"></div>
+                                </div>
+                                <small>{{ performance_metrics.get('completion_rate', 0) }}%</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Emergencies -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Emergencies</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_emergencies %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Volunteers</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emergency in recent_emergencies %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ emergency.title }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'danger' if emergency.priority_level == 'critical' 
+                                                                      else 'warning' if emergency.priority_level == 'high'
+                                                                      else 'info' if emergency.priority_level == 'medium'
+                                                                      else 'secondary' }}">
+                                                {{ emergency.priority_level.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'success' if emergency.status == 'completed'
+                                                                      else 'info' if emergency.status == 'assigned'
+                                                                      else 'warning' if emergency.status == 'open'
+                                                                      else 'secondary' }}">
+                                                {{ emergency.status.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {{ emergency.assignments|length }}/{{ emergency.required_volunteers }}
+                                        </td>
+                                        <td>
+                                            <small>{{ emergency.created_at.strftime('%m/%d/%Y %H:%M') }}</small>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No emergencies in this time period</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Status Chart
+    const statusData = {{ emergency_stats.get('status_breakdown', {}) | tojson }};
+    if (Object.keys(statusData).length > 0) {
+        const statusCtx = document.getElementById('statusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(statusData).map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                datasets: [{
+                    data: Object.values(statusData),
+                    backgroundColor: [
+                        '#28a745', // completed - green
+                        '#17a2b8', // assigned - info
+                        '#ffc107', // open - warning
+                        '#6c757d'  // cancelled - secondary
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Priority Chart
+    const priorityData = {{ emergency_stats.get('priority_breakdown', {}) | tojson }};
+    if (Object.keys(priorityData).length > 0) {
+        const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+        new Chart(priorityCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(priorityData).map(p => p.charAt(0).toUpperCase() + p.slice(1)),
+                datasets: [{
+                    label: 'Count',
+                    data: Object.values(priorityData),
+                    backgroundColor: [
+                        '#6c757d', // low - secondary
+                        '#17a2b8', // medium - info
+                        '#ffc107', // high - warning
+                        '#dc3545'  // critical - danger
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Assignment Chart
+    const assignmentData = {{ assignment_stats | tojson }};
+    if (assignmentData && assignmentData.total_assignments > 0) {
+        const assignmentCtx = document.getElementById('assignmentChart').getContext('2d');
+        new Chart(assignmentCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Accepted', 'Declined', 'Completed', 'Cancelled'],
+                datasets: [{
+                    label: 'Assignments',
+                    data: [
+                        assignmentData.accepted || 0,
+                        assignmentData.declined || 0,
+                        assignmentData.completed || 0,
+                        assignmentData.cancelled || 0
+                    ],
+                    backgroundColor: [
+                        '#17a2b8', // accepted - info
+                        '#6c757d', // declined - secondary
+                        '#28a745', // completed - success
+                        '#343a40'  // cancelled - dark
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Create Emergency{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Create Emergency Request</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="emergency-form">
+                        <!-- Basic Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="title" class="form-label">Emergency Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" required
+                                       placeholder="Brief description of the emergency">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="priority_level" class="form-label">Priority Level *</label>
+                                <select class="form-select" id="priority_level" name="priority_level" required>
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" required
+                                      placeholder="Detailed description of the emergency situation and what help is needed"></textarea>
+                        </div>
+
+                        <!-- Location Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="latitude" class="form-label">Latitude *</label>
+                                <input type="number" class="form-control" id="latitude" name="latitude" 
+                                       step="any" required placeholder="47.6062">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="longitude" class="form-label">Longitude *</label>
+                                <input type="number" class="form-control" id="longitude" name="longitude" 
+                                       step="any" required placeholder="-122.3321">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="address" name="address"
+                                   placeholder="Street address or landmark description">
+                            <div class="form-text">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="get-location">
+                                    <i class="fas fa-map-marker-alt"></i> Use My Location
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info" id="show-map">
+                                    <i class="fas fa-map"></i> Show on Map
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Volunteer Requirements -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="required_volunteers" class="form-label">Required Volunteers *</label>
+                                <input type="number" class="form-control" id="required_volunteers" 
+                                       name="required_volunteers" min="1" max="10" value="1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="search_radius_km" class="form-label">Search Radius (km) *</label>
+                                <input type="number" class="form-control" id="search_radius_km" 
+                                       name="search_radius_km" min="1" max="50" value="10" required>
+                            </div>
+                        </div>
+
+                        <!-- Required Skills -->
+                        <div class="mb-3">
+                            <label class="form-label">Required Skills</label>
+                            <div class="form-text mb-2">Select skills that volunteers should have for this emergency</div>
+                            {% if skills %}
+                                <div class="row">
+                                    {% for skill in skills %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="skill_{{ skill.id }}" name="required_skills" 
+                                                   value="{{ skill.id }}">
+                                            <label class="form-check-label" for="skill_{{ skill.id }}">
+                                                {{ skill.name }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No skills available in the system.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Map Container (hidden by default) -->
+                        <div id="map-container" class="mb-3" style="display: none;">
+                            <div id="map" style="height: 300px; border: 1px solid #ddd; border-radius: 0.375rem;"></div>
+                            <div class="form-text">Click on the map to set the emergency location</div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('authority.dashboard') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Create Emergency
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let map = null;
+    let marker = null;
+
+    // Get user's location
+    document.getElementById('get-location').addEventListener('click', function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
+                document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
+                
+                // Update map if visible
+                if (map) {
+                    updateMapLocation(position.coords.latitude, position.coords.longitude);
+                }
+            }, function(error) {
+                alert('Error getting location: ' + error.message);
+            });
+        } else {
+            alert('Geolocation is not supported by this browser.');
+        }
+    });
+
+    // Show/hide map
+    document.getElementById('show-map').addEventListener('click', function() {
+        const mapContainer = document.getElementById('map-container');
+        const button = this;
+        
+        if (mapContainer.style.display === 'none') {
+            mapContainer.style.display = 'block';
+            button.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Map';
+            initializeMap();
+        } else {
+            mapContainer.style.display = 'none';
+            button.innerHTML = '<i class="fas fa-map"></i> Show on Map';
+        }
+    });
+
+    // Update map when coordinates change
+    document.getElementById('latitude').addEventListener('change', updateMapFromInputs);
+    document.getElementById('longitude').addEventListener('change', updateMapFromInputs);
+
+    function initializeMap() {
+        if (typeof L === 'undefined') {
+            // Load Leaflet if not already loaded
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.css';
+            document.head.appendChild(link);
+
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js';
+            script.onload = createMap;
+            document.head.appendChild(script);
+        } else {
+            createMap();
+        }
+    }
+
+    function createMap() {
+        const lat = parseFloat(document.getElementById('latitude').value) || 47.6062;
+        const lng = parseFloat(document.getElementById('longitude').value) || -122.3321;
+
+        map = L.map('map').setView([lat, lng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+
+        // Update coordinates when marker is dragged
+        marker.on('dragend', function(e) {
+            const position = marker.getLatLng();
+            document.getElementById('latitude').value = position.lat.toFixed(6);
+            document.getElementById('longitude').value = position.lng.toFixed(6);
+        });
+
+        // Update marker when map is clicked
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            marker.setLatLng([lat, lng]);
+            document.getElementById('latitude').value = lat.toFixed(6);
+            document.getElementById('longitude').value = lng.toFixed(6);
+        });
+    }
+
+    function updateMapLocation(lat, lng) {
+        if (map && marker) {
+            map.setView([lat, lng], 13);
+            marker.setLatLng([lat, lng]);
+        }
+    }
+
+    function updateMapFromInputs() {
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
+        
+        if (!isNaN(lat) && !isNaN(lng) && map && marker) {
+            updateMapLocation(lat, lng);
+        }
+    }
+
+    // Form validation
+    document.getElementById('emergency-form').addEventListener('submit', function(e) {
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
+        
+        if (isNaN(lat) || isNaN(lng)) {
+            e.preventDefault();
+            alert('Please provide valid latitude and longitude coordinates.');
+            return;
+        }
+        
+        if (lat < -90 || lat > 90) {
+            e.preventDefault();
+            alert('Latitude must be between -90 and 90 degrees.');
+            return;
+        }
+        
+        if (lng < -180 || lng > 180) {
+            e.preventDefault();
+            alert('Longitude must be between -180 and 180 degrees.');
+            return;
+        }
+    });
+
+    // Priority level styling
+    document.getElementById('priority_level').addEventListener('change', function() {
+        const select = this;
+        select.className = 'form-select';
+        
+        switch(this.value) {
+            case 'critical':
+                select.classList.add('border-danger');
+                break;
+            case 'high':
+                select.classList.add('border-warning');
+                break;
+            case 'medium':
+                select.classList.add('border-info');
+                break;
+            default:
+                select.classList.add('border-secondary');
+        }
+    });
+});
+</script>
+{% endblock %}

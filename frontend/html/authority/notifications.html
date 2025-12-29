@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Notifications</h1>
+                <div>
+                    <button id="mark-all-read" class="btn btn-outline-secondary">
+                        <i class="fas fa-check-double"></i> Mark All Read
+                    </button>
+                    <a href="{{ url_for('authority.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Notification Statistics -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Notification Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <h4 class="text-primary">{{ notification_stats.get('total_notifications', 0) }}</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning">{{ notification_stats.get('unread_count', 0) }}</h4>
+                            <small class="text-muted">Unread</small>
+                        </div>
+                    </div>
+                    
+                    {% if notification_stats.get('type_breakdown') %}
+                    <hr>
+                    <h6 class="mb-3">By Type</h6>
+                    {% for type, count in notification_stats.get('type_breakdown', {}).items() %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-capitalize">{{ type.replace('_', ' ') }}</span>
+                        <span class="badge badge-secondary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Notifications</h5>
+                </div>
+                <div class="card-body">
+                    {% if notifications %}
+                        <div class="notification-list">
+                            {% for notification in notifications %}
+                            <div class="notification-item {{ 'unread' if not notification.get('read') }} mb-3 p-3 border rounded">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="notification-content flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-{{ 'user-check' if notification.get('type') == 'assignment_accepted'
+                                                               else 'user-times' if notification.get('type') == 'assignment_declined'
+                                                               else 'check-circle' if notification.get('type') == 'assignment_completed'
+                                                               else 'exclamation-triangle' if notification.get('type') == 'emergency_escalated'
+                                                               else 'search' if notification.get('type') == 'replacement_search'
+                                                               else 'bell' }} me-2 text-{{ 'success' if notification.get('type') == 'assignment_accepted'
+                                                                                         else 'warning' if notification.get('type') == 'assignment_declined'
+                                                                                         else 'info' if notification.get('type') == 'assignment_completed'
+                                                                                         else 'danger' if notification.get('type') == 'emergency_escalated'
+                                                                                         else 'secondary' }}"></i>
+                                            <h6 class="mb-0">{{ notification.get('title', 'Notification') }}</h6>
+                                            {% if not notification.get('read') %}
+                                            <span class="badge badge-primary ms-2">New</span>
+                                            {% endif %}
+                                        </div>
+                                        <p class="mb-2">{{ notification.get('message', '') }}</p>
+                                        
+                                        <!-- Additional Details -->
+                                        {% if notification.get('volunteer_details') %}
+                                        <div class="notification-details mt-2">
+                                            <small class="text-muted">
+                                                <strong>Volunteer:</strong> {{ notification.volunteer_details.get('name') }}
+                                                {% if notification.volunteer_details.get('email') %}
+                                                ({{ notification.volunteer_details.get('email') }})
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if notification.get('completion_details') %}
+                                        <div class="notification-details mt-2">
+                                            <small class="text-muted">
+                                                <strong>Completion Time:</strong> {{ notification.completion_details.get('total_time_minutes') }} minutes
+                                                {% if notification.completion_details.get('notes') %}
+                                                <br><strong>Notes:</strong> {{ notification.completion_details.get('notes') }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if notification.get('escalation_details') %}
+                                        <div class="notification-details mt-2">
+                                            <small class="text-muted">
+                                                <strong>New Priority:</strong> {{ notification.escalation_details.get('new_priority', '').title() }}
+                                                <br><strong>Search Radius:</strong> {{ notification.escalation_details.get('new_search_radius') }}km
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="notification-meta text-end">
+                                        <small class="text-muted">
+                                            {% if notification.get('created_at') %}
+                                                {% set created_at = notification.get('created_at') %}
+                                                {% if created_at is string %}
+                                                    {{ moment(created_at).fromNow() }}
+                                                {% else %}
+                                                    {{ created_at.strftime('%m/%d %H:%M') }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </small>
+                                        
+                                        <!-- Action Buttons -->
+                                        <div class="mt-2">
+                                            {% if notification.get('emergency_id') %}
+                                            <a href="{{ url_for('authority.view_emergency', emergency_id=notification.get('emergency_id')) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View Emergency
+                                            </a>
+                                            {% endif %}
+                                            
+                                            {% if notification.get('assignment_id') %}
+                                            <a href="{{ url_for('authority.view_emergency', emergency_id=notification.get('emergency_id')) }}#assignment-{{ notification.get('assignment_id') }}" 
+                                               class="btn btn-sm btn-outline-info">
+                                                <i class="fas fa-user"></i> View Assignment
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Load More Button -->
+                        <div class="text-center mt-4">
+                            <button id="load-more" class="btn btn-outline-secondary">
+                                <i class="fas fa-chevron-down"></i> Load More Notifications
+                            </button>
+                        </div>
+                        
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-bell fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No notifications yet</h5>
+                            <p class="text-muted">You'll receive notifications when volunteers respond to your emergency requests.</p>
+                            <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                                Create Emergency
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.notification-item {
+    transition: all 0.3s ease;
+}
+
+.notification-item.unread {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff !important;
+}
+
+.notification-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.notification-details {
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border-left: 3px solid #dee2e6;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentLimit = 50;
+    
+    // Mark all as read functionality
+    document.getElementById('mark-all-read').addEventListener('click', function() {
+        // In a real implementation, this would make an API call to mark notifications as read
+        const unreadItems = document.querySelectorAll('.notification-item.unread');
+        unreadItems.forEach(item => {
+            item.classList.remove('unread');
+            const newBadge = item.querySelector('.badge-primary');
+            if (newBadge) {
+                newBadge.remove();
+            }
+        });
+        
+        // Update unread count
+        const unreadCountElement = document.querySelector('.text-warning');
+        if (unreadCountElement) {
+            unreadCountElement.textContent = '0';
+        }
+        
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-check"></i> All Read';
+    });
+    
+    // Load more notifications
+    document.getElementById('load-more').addEventListener('click', function() {
+        currentLimit += 25;
+        const url = new URL(window.location);
+        url.searchParams.set('limit', currentLimit);
+        window.location.href = url.toString();
+    });
+    
+    // Auto-refresh notifications every 60 seconds
+    setInterval(function() {
+        // In a real implementation, this would fetch new notifications via AJAX
+        // For now, we'll just reload the page
+        if (document.visibilityState === 'visible') {
+            location.reload();
+        }
+    }, 60000);
+});
+
+// Moment.js alternative for time formatting (simple implementation)
+function moment(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    return {
+        fromNow: function() {
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins} minutes ago`;
+            if (diffHours < 24) return `${diffHours} hours ago`;
+            if (diffDays < 7) return `${diffDays} days ago`;
+            return date.toLocaleDateString();
+        }
+    };
+}
+</script>
+{% endblock %}

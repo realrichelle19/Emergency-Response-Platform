@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Assignment History - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>Assignment History</h2>
+            <div>
+                <a href="{{ url_for('volunteer.dashboard') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if assignments %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Emergency</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Assigned</th>
+                                    <th>Responded</th>
+                                    <th>Completed</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in assignments %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ assignment.emergency_request.title }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ assignment.emergency_request.description[:100] }}{% if assignment.emergency_request.description|length > 100 %}...{% endif %}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge status-{{ assignment.status }}">
+                                            {{ assignment.status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if assignment.emergency_request.priority_level == 'critical' else 'warning' if assignment.emergency_request.priority_level == 'high' else 'info' if assignment.emergency_request.priority_level == 'medium' else 'secondary' }}">
+                                            {{ assignment.emergency_request.priority_level.title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>{{ assignment.assigned_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                    </td>
+                                    <td>
+                                        {% if assignment.responded_at %}
+                                            <small>{{ assignment.responded_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if assignment.completed_at %}
+                                            <small>{{ assignment.completed_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                        {% else %}
+                                            <small class="text-muted">-</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info assignment-details-btn" data-assignment-id="{{ assignment.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if has_prev or has_next %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Assignment history pagination">
+                <ul class="pagination justify-content-center">
+                    {% if has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('volunteer.history', page=page-1) }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page }}</span>
+                    </li>
+                    
+                    {% if has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('volunteer.history', page=page+1) }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+    
+{% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h5>No Assignment History</h5>
+                <p class="mb-0">You haven't been assigned to any emergency requests yet.</p>
+                <small class="text-muted d-block mt-2">
+                    Complete your profile and set your status to "Available" to start receiving assignments.
+                </small>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Assignment Details Modal -->
+<div class="modal fade" id="assignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assignment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="assignmentDetails">
+                    <!-- Assignment details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+.status-requested {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.status-accepted {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.status-declined {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.status-completed {
+    background-color: #198754;
+    color: #fff;
+}
+
+.status-cancelled {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,.075);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to assignment detail buttons
+    document.querySelectorAll('.assignment-details-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const assignmentId = this.getAttribute('data-assignment-id');
+            showAssignmentDetails(assignmentId);
+        });
+    });
+});
+
+function showAssignmentDetails(assignmentId) {
+    // For now, show a placeholder
+    // In a full implementation, this would fetch assignment details via API
+    document.getElementById('assignmentDetails').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading assignment details...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+    modal.show();
+    
+    // Simulate loading
+    setTimeout(() => {
+        document.getElementById('assignmentDetails').innerHTML = `
+            <div class="alert alert-info">
+                <h6>Assignment #${assignmentId}</h6>
+                <p>Detailed assignment information would be displayed here, including:</p>
+                <ul>
+                    <li>Emergency details and location</li>
+                    <li>Required skills and qualifications</li>
+                    <li>Contact information</li>
+                    <li>Timeline and status updates</li>
+                    <li>Notes and communications</li>
+                </ul>
+                <small class="text-muted">This feature will be implemented in the full version.</small>
+            </div>
+        `;
+    }, 1000);
+}
+</script>
+{% endblock %}

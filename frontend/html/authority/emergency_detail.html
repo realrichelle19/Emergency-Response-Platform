@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency: {{ emergency.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('authority.dashboard') }}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{{ url_for('authority.list_emergencies') }}">Emergencies</a></li>
+                            <li class="breadcrumb-item active">{{ emergency.title }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-0">{{ emergency.title }}</h1>
+                    <div class="mt-2">
+                        <span class="badge badge-{{ 'danger' if emergency.priority_level == 'critical' 
+                                                  else 'warning' if emergency.priority_level == 'high'
+                                                  else 'info' if emergency.priority_level == 'medium'
+             

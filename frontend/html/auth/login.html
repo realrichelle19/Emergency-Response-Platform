@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4 class="mb-0">Sign In</h4>
+                <p class="text-muted mb-0">Access your Emergency Response account</p>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.password.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.remember_me(class="form-check-input") }}
+                        {{ form.remember_me.label(class="form-check-label") }}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">
+                    Don't have an account? 
+                    <a href="{{ url_for('auth.register') }}">Register here</a>
+                </p>
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <div class="row g-2">
+                <div class="col-6">
+                    <a href="{{ url_for('auth.register', role='volunteer') }}" class="btn btn-outline-primary btn-sm w-100">
+                        Join as Volunteer
+                    </a>
+                </div>
+                <div class="col-6">
+                    <a href="{{ url_for('auth.register', role='authority') }}" class="btn btn-outline-success btn-sm w-100">
+                        Join as Authority
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-8 mx-auto">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title">Demo Accounts</h5>
+                <p class="card-text">For testing purposes, you can use these demo accounts:</p>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Volunteer:</strong><br>
+                        Email: volunteer1@emergency.local<br>
+                        Password: password123
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Authority:</strong><br>
+                        Email: fire.chief@emergency.local<br>
+                        Password: password123
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Admin:</strong><br>
+                        Email: admin@emergency.local<br>
+                        Password: password123
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}My Skills - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>My Skills</h4>
+            </div>
+            <div class="card-body">
+                {% if current_user.volunteer_profile and current_user.volunteer_profile.volunteer_skills %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Skill</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th>Added</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for volunteer_skill in current_user.volunteer_profile.volunteer_skills %}
+                                <tr>
+                                    <td>{{ volunteer_skill.skill.name }}</td>
+                                    <td>{{ volunteer_skill.skill.category.title() }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if volunteer_skill.verification_status == 'verified' else 'warning' if volunteer_skill.verification_status == 'pending' else 'danger' }}">
+                                            {{ volunteer_skill.verification_status.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ volunteer_skill.created_at.strftime('%b %d, %Y') }}</td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('volunteer.remove_skill', skill_id=volunteer_skill.skill.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this skill?')">
+                                                Remove
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <h5>No Skills Added Yet</h5>
+                        <p>Add your skills to get matched with relevant emergency requests.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Add New Skill</h5>
+            </div>
+            <div class="card-body">
+                {% if skills_by_category %}
+                    <form method="POST" action="{{ url_for('volunteer.add_skill') }}">
+                        <div class="mb-3">
+                            <label for="skill_id" class="form-label">Select Skill</label>
+                            <select name="skill_id" id="skill_id" class="form-select" required>
+                                <option value="">Choose a skill...</option>
+                                {% for category, skills in skills_by_category.items() %}
+                                    <optgroup label="{{ category.title() }}">
+                                        {% for skill in skills %}
+                                            <option value="{{ skill.id }}">{{ skill.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Skill</button>
+                    </form>
+                {% else %}
+                    <p class="text-muted">No skills available to add.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Skill Verification</h5>
+            </div>
+            <div class="card-body">
+                <div class="small">
+                    <p><strong>Pending:</strong> Skill is awaiting admin verification</p>
+                    <p><strong>Verified:</strong> Skill has been approved by an admin</p>
+                    <p><strong>Rejected:</strong> Skill verification was declined</p>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <small class="text-muted">
+                        Only verified skills are used for emergency matching
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

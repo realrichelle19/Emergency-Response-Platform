@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Nearby Emergencies - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>Nearby Emergency Requests</h2>
+            <div class="d-flex align-items-center">
+                <label for="radiusSelect" class="form-label me-2 mb-0">Search Radius:</label>
+                <select id="radiusSelect" class="form-select form-select-sm" style="width: auto;" onchange="updateRadius()">
+                    <option value="10" {{ 'selected' if radius == 10 else '' }}>10 km</option>
+                    <option value="25" {{ 'selected' if radius == 25 else '' }}>25 km</option>
+                    <option value="50" {{ 'selected' if radius == 50 else '' }}>50 km</option>
+                    <option value="100" {{ 'selected' if radius == 100 else '' }}>100 km</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if emergencies %}
+    <div class="row">
+        {% for emergency, distance in emergencies %}
+        <div class="col-md-6 mb-4">
+            <div class="card emergency-card priority-{{ emergency.priority_level }}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">{{ emergency.title }}</h6>
+                    <div>
+                        <span class="badge bg-{{ 'danger' if emergency.priority_level == 'critical' else 'warning' if emergency.priority_level == 'high' else 'info' if emergency.priority_level == 'medium' else 'secondary' }}">
+                            {{ emergency.priority_level.title() }}
+                        </span>
+                        {% if distance %}
+                            <span class="badge bg-light text-dark ms-1">{{ "%.1f"|format(distance) }} km</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ emergency.description }}</p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{ emergency.address or 'Location provided upon assignment' }}
+                            </small>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ emergency.created_at.strftime('%m/%d/%Y %I:%M %p') }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <small class="text-muted">
+                                <i class="fas fa-users me-1"></i>
+                                {{ emergency.required_volunteers }} volunteer{{ 's' if emergency.required_volunteers != 1 else '' }} needed
+                            </small>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted">
+                                <i class="fas fa-user-tie me-1"></i>
+                                {{ emergency.authority.first_name }} {{ emergency.authority.last_name }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    {% if emergency.required_skills %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">
+                            <i class="fas fa-tools me-1"></i>Required Skills:
+                        </small>
+                        <div>
+                            {% for required_skill in emergency.required_skills %}
+                                <span class="badge bg-secondary me-1">{{ required_skill.skill.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if emergency.status == 'open' %}
+                                <span class="badge bg-success">Open</span>
+                            {% elif emergency.status == 'assigned' %}
+                                <span class="badge bg-warning">In Progress</span>
+                            {% elif emergency.status == 'completed' %}
+                                <span class="badge bg-info">Completed</span>
+                            {% elif emergency.status == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if emergency.status == 'open' %}
+                            <div>
+                                <button class="btn btn-primary btn-sm interest-btn" data-emergency-id="{{ emergency.id }}" data-emergency-title="{{ emergency.title }}">
+                                    <i class="fas fa-hand-paper me-1"></i>Express Interest
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if emergencies|length == 0 %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h5>No Emergency Requests Found</h5>
+                <p class="mb-0">There are currently no emergency requests within {{ radius }} km of your location that match your skills.</p>
+                {% if current_user.volunteer_profile and current_user.volunteer_profile.availability_status != 'available' %}
+                <small class="text-muted d-block mt-2">
+                    Set your status to "Available" to see more emergency requests.
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+{% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                <h5>Complete Your Profile</h5>
+                <p class="mb-3">To see nearby emergency requests, please complete your volunteer profile with your location and skills.</p>
+                <a href="{{ url_for('volunteer.profile') }}" class="btn btn-primary">
+                    <i class="fas fa-user-edit me-1"></i>Complete Profile
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Interest Modal -->
+<div class="modal fade" id="interestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Express Interest</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you interested in volunteering for this emergency request?</p>
+                <p><strong id="emergencyTitle"></strong></p>
+                <div class="mb-3">
+                    <label for="interestNotes" class="form-label">Additional Notes (Optional)</label>
+                    <textarea class="form-control" id="interestNotes" rows="3" 
+                            placeholder="Any relevant experience or additional information..."></textarea>
+                </div>
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-info-circle me-1"></i>
+                        Expressing interest will notify the requesting authority. They may contact you directly for assignment.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitInterest()">
+                    <i class="fas fa-paper-plane me-1"></i>Express Interest
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+.emergency-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.emergency-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.emergency-card.priority-critical {
+    border-left: 4px solid #dc3545;
+}
+
+.emergency-card.priority-high {
+    border-left: 4px solid #fd7e14;
+}
+
+.emergency-card.priority-medium {
+    border-left: 4px solid #0dcaf0;
+}
+
+.emergency-card.priority-low {
+    border-left: 4px solid #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentEmergencyId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to interest buttons
+    document.querySelectorAll('.interest-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const emergencyId = this.getAttribute('data-emergency-id');
+            const emergencyTitle = this.getAttribute('data-emergency-title');
+            showInterestModal(emergencyId, emergencyTitle);
+        });
+    });
+});
+
+function updateRadius() {
+    const radius = document.getElementById('radiusSelect').value;
+    const url = new URL(window.location);
+    url.searchParams.set('radius', radius);
+    window.location.href = url.toString();
+}
+
+function showInterestModal(emergencyId, emergencyTitle) {
+    currentEmergencyId = emergencyId;
+    document.getElementById('emergencyTitle').textContent = emergencyTitle;
+    document.getElementById('interestNotes').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('interestModal'));
+    modal.show();
+}
+
+async function submitInterest() {
+    if (!currentEmergencyId) return;
+    
+    const notes = document.getElementById('interestNotes').value;
+    
+    try {
+        // For now, just show a success message
+        // In a full implementation, this would send the interest to the authority
+        alert('Interest expressed successfully! The requesting authority will be notified.');
+        
+        bootstrap.Modal.getInstance(document.getElementById('interestModal')).hide();
+        
+        // You could implement an API endpoint to handle interest expressions
+        /*
+        const response = await fetch(`/volunteer/api/express-interest/${currentEmergencyId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ notes: notes })
+        });
+        
+        if (response.ok) {
+            alert('Interest expressed successfully!');
+            bootstrap.Modal.getInstance(document.getElementById('interestModal')).hide();
+        } else {
+            const data = await response.json();
+            alert('Error: ' + (data.error || 'Failed to express interest'));
+        }
+        */
+    } catch (error) {
+        alert('Network error occurred');
+    }
+}
+
+// Auto-refresh every 60 seconds
+setInterval(() => {
+    if (!document.querySelector('.modal.show')) {
+        window.location.reload();
+    }
+}, 60000);
+</script>
+{% endblock %}

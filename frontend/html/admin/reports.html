@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}System Reports - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">System Reports</h1>
+                <div class="btn-group">
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                    <button class="btn btn-outline-primary" onclick="exportReports()">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Period Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="days" class="form-label">Report Period</label>
+                            <select class="form-select" id="days" name="days" onchange="this.form.submit()">
+                                <option value="7" {{ 'selected' if days == 7 else '' }}>Last 7 days</option>
+                                <option value="30" {{ 'selected' if days == 30 else '' }}>Last 30 days</option>
+                                <option value="90" {{ 'selected' if days == 90 else '' }}>Last 90 days</option>
+                                <option value="365" {{ 'selected' if days == 365 else '' }}>Last year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-9">
+                            <p class="mb-0 text-muted">
+                                Report period: 
+                                {% if report_data.report_period %}
+                                    {{ report_data.report_period.start_date[:10] }} to {{ report_data.report_period.end_date[:10] }}
+                                    ({{ report_data.report_period.days }} days)
+                                {% endif %}
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if report_data %}
+    <!-- Emergency Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Emergency Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Status Breakdown</h6>
+                            <div class="row text-center mb-3">
+                                <div class="col-3">
+                                    <h4 class="text-warning">{{ report_data.emergency_statistics.by_status.open or 0 }}</h4>
+                                    <small>Open</small>
+                                </div>
+                                <div class="col-3">
+                                    <h4 class="text-info">{{ report_data.emergency_statistics.by_status.assigned or 0 }}</h4>
+                                    <small>Assigned</small>
+                                </div>
+                                <div class="col-3">
+                                    <h4 class="text-success">{{ report_data.emergency_statistics.by_status.completed or 0 }}</h4>
+                                    <small>Completed</small>
+                                </div>
+                                <div class="col-3">
+                                    <h4 class="text-danger">{{ report_data.emergency_statistics.by_status.cancelled or 0 }}</h4>
+                                    <small>Cancelled</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Priority Breakdown</h6>
+                            <div class="row text-center mb-3">
+                                <div class="col-3">
+                                    <h4 class="text-secondary">{{ report_data.emergency_statistics.by_priority.low or 0 }}</h4>
+                                    <small>Low</small>
+                                </div>
+                                <div class="col-3">
+                                    <h4 class="text-primary">{{ report_data.emergency_statistics.by_priority.medium or 0 }}</h4>
+                                    <small>Medium</small>
+                                </div>
+                                <div class="col-3">
+                                    <h4 class="text-warning">{{ report_data.emergency_statistics.by_priority.high or 0 }}</h4>
+                                    <small>High</small>
+                                </div>
+                                <div class="col-3">
+                                    <h4 class="text-danger">{{ report_data.emergency_statistics.by_priority.critical or 0 }}</h4>
+                                    <small>Critical</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <strong>Total Emergencies:</strong> {{ report_data.emergency_statistics.total or 0 }}
+                                <span class="ms-3">
+                                    <strong>Completion Rate:</strong> 
+                                    {% set total_emergencies = report_data.emergency_statistics.total or 1 %}
+                                    {% set completed = report_data.emergency_statistics.by_status.completed or 0 %}
+                                    {{ "%.1f"|format((completed / total_emergencies * 100) if total_emergencies > 0 else 0) }}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Assignment Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row text-center mb-3">
+                                <div class="col">
+                                    <h4 class="text-warning">{{ report_data.assignment_statistics.by_status.requested or 0 }}</h4>
+                                    <small>Requested</small>
+                                </div>
+                                <div class="col">
+                                    <h4 class="text-success">{{ report_data.assignment_statistics.by_status.accepted or 0 }}</h4>
+                                    <small>Accepted</small>
+                                </div>
+                                <div class="col">
+                                    <h4 class="text-danger">{{ report_data.assignment_statistics.by_status.declined or 0 }}</h4>
+                                    <small>Declined</small>
+                                </div>
+                                <div class="col">
+                                    <h4 class="text-primary">{{ report_data.assignment_statistics.by_status.completed or 0 }}</h4>
+                                    <small>Completed</small>
+                                </div>
+                                <div class="col">
+                                    <h4 class="text-secondary">{{ report_data.assignment_statistics.by_status.cancelled or 0 }}</h4>
+                                    <small>Cancelled</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h3 class="text-primary">{{ report_data.assignment_statistics.total or 0 }}</h3>
+                                <p class="mb-0">Total Assignments</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="text-success">{{ report_data.assignment_statistics.acceptance_rate or 0 }}%</h5>
+                                    <small>Acceptance Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="text-primary">{{ report_data.assignment_statistics.completion_rate or 0 }}%</h5>
+                                    <small>Completion Rate</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="text-info">{{ report_data.assignment_statistics.average_response_time or 0 }} min</h5>
+                                    <small>Avg Response Time</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User and Performance Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">User Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ report_data.user_statistics.new_registrations or 0 }}</h4>
+                            <small>New Registrations</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success">{{ report_data.user_statistics.active_volunteers or 0 }}</h4>
+                            <small>Active Volunteers</small>
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-12">
+                            <h4 class="text-info">{{ report_data.user_statistics.skill_verifications or 0 }}</h4>
+                            <small>Skill Verifications Processed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">System Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ report_data.performance_statistics.total_activity_logs or 0 }}</h4>
+                            <small>Activity Log Entries</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning">{{ report_data.performance_statistics.emergency_escalations or 0 }}</h4>
+                            <small>Emergency Escalations</small>
+                        </div>
+                    </div>
+                    <div class="alert alert-info text-center">
+                        <strong>System Health:</strong> 
+                        {% set escalation_rate = (report_data.performance_statistics.emergency_escalations or 0) / (report_data.emergency_statistics.total or 1) * 100 %}
+                        {% if escalation_rate < 10 %}
+                            <span class="text-success">Excellent</span>
+                        {% elif escalation_rate < 25 %}
+                            <span class="text-warning">Good</span>
+                        {% else %}
+                            <span class="text-danger">Needs Attention</span>
+                        {% endif %}
+                        ({{ "%.1f"|format(escalation_rate) }}% escalation rate)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Summary -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Report Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Key Metrics</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Total System Activity:</strong> {{ report_data.performance_statistics.total_activity_logs or 0 }} actions</li>
+                                <li><strong>Emergency Response Rate:</strong> 
+                                    {% set response_rate = ((report_data.emergency_statistics.by_status.assigned or 0) + (report_data.emergency_statistics.by_status.completed or 0)) / (report_data.emergency_statistics.total or 1) * 100 %}
+                                    {{ "%.1f"|format(response_rate) }}%
+                                </li>
+                                <li><strong>Volunteer Engagement:</strong> 
+                                    {{ report_data.assignment_statistics.acceptance_rate or 0 }}% acceptance rate
+                                </li>
+                                <li><strong>System Efficiency:</strong> 
+                                    {{ report_data.assignment_statistics.average_response_time or 0 }} min avg response time
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Recommendations</h6>
+                            <ul class="list-unstyled">
+                                {% if (report_data.assignment_statistics.acceptance_rate or 0) < 70 %}
+                                    <li class="text-warning">• Consider improving volunteer incentives (acceptance rate below 70%)</li>
+                                {% endif %}
+                                {% if (report_data.assignment_statistics.average_response_time or 0) > 60 %}
+                                    <li class="text-warning">• Review notification system (response time over 60 minutes)</li>
+                                {% endif %}
+                                {% if (report_data.performance_statistics.emergency_escalations or 0) / (report_data.emergency_statistics.total or 1) > 0.25 %}
+                                    <li class="text-danger">• High escalation rate indicates volunteer shortage</li>
+                                {% endif %}
+                                {% if report_data.user_statistics.active_volunteers < 10 %}
+                                    <li class="text-info">• Consider volunteer recruitment campaigns</li>
+                                {% endif %}
+                                {% if not ((report_data.assignment_statistics.acceptance_rate or 0) < 70 or (report_data.assignment_statistics.average_response_time or 0) > 60) %}
+                                    <li class="text-success">• System performance is within acceptable ranges</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <h5>No report data available</h5>
+                <p>Reports will be generated once there is system activity to analyze.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function exportReports() {
+    const days = document.getElementById('days').value;
+    
+    fetch(`/admin/api/reports/export?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            // Create and download JSON file
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `system_report_${days}days_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        })
+        .catch(error => {
+            console.error('Error exporting reports:', error);
+            alert('Error exporting reports. Please try again.');
+        });
+}
+</script>
+{% endblock %}

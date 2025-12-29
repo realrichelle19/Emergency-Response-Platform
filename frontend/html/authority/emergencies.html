@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Requests{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Emergency Requests</h1>
+                <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                    <i class="fas fa-plus"></i> Create Emergency
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status Filter</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All Statuses</option>
+                                <option value="open" {{ 'selected' if status_filter == 'open' }}>Open</option>
+                                <option value="assigned" {{ 'selected' if status_filter == 'assigned' }}>Assigned</option>
+                                <option value="completed" {{ 'selected' if status_filter == 'completed' }}>Completed</option>
+                                <option value="cancelled" {{ 'selected' if status_filter == 'cancelled' }}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a href="{{ url_for('authority.list_emergencies') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if emergencies and emergencies.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Location</th>
+                                        <th>Volunteers</th>
+                                        <th>Created</th>
+                                        <th>Last Updated</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emergency in emergencies.items %}
+                                    <tr class="{{ 'table-danger' if emergency.priority_level == 'critical'
+                                                else 'table-warning' if emergency.priority_level == 'high'
+                                                else '' }}">
+                                        <td>
+                                            <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                                               class="text-decoration-none fw-bold">
+                                                {{ emergency.title }}
+                                            </a>
+                                            {% if emergency.escalation_count > 0 %}
+                                                <span class="badge badge-warning ms-1">
+                                                    Escalated {{ emergency.escalation_count }}x
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'danger' if emergency.priority_level == 'critical' 
+                                                                      else 'warning' if emergency.priority_level == 'high'
+                                                                      else 'info' if emergency.priority_level == 'medium'
+                                                                      else 'secondary' }}">
+                                                {{ emergency.priority_level.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'success' if emergency.status == 'completed'
+                                                                      else 'info' if emergency.status == 'assigned'
+                                                                      else 'warning' if emergency.status == 'open'
+                                                                      else 'secondary' }}">
+                                                {{ emergency.status.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ emergency.address or 'Lat: %.4f, Lng: %.4f'|format(emergency.latitude, emergency.longitude) }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2">{{ emergency.assignments|length }}/{{ emergency.required_volunteers }}</span>
+                                                <div class="progress" style="width: 60px; height: 8px;">
+                                                    <div class="progress-bar" role="progressbar" 
+                                                         style="width: {{ (emergency.assignments|length / emergency.required_volunteers * 100)|round }}%"
+                                                         aria-valuenow="{{ emergency.assignments|length }}" 
+                                                         aria-valuemin="0" 
+                                                         aria-valuemax="{{ emergency.required_volunteers }}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ emergency.created_at.strftime('%m/%d/%Y %H:%M') }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ emergency.updated_at.strftime('%m/%d/%Y %H:%M') if emergency.updated_at else '-' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                                                   class="btn btn-outline-primary" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if emergency.status in ['open', 'assigned'] %}
+                                                <a href="{{ url_for('authority.edit_emergency', emergency_id=emergency.id) }}" 
+                                                   class="btn btn-outline-secondary" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <form method="POST" action="{{ url_for('authority.escalate_emergency', emergency_id=emergency.id) }}" 
+                                                      class="d-inline" onsubmit="return confirm('Are you sure you want to escalate this emergency?')">
+                                                    <button type="submit" class="btn btn-outline-warning" title="Escalate">
+                                                        <i class="fas fa-arrow-up"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if emergencies.pages > 1 %}
+                        <nav aria-label="Emergency pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if emergencies.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('authority.list_emergencies', page=emergencies.prev_num, status=status_filter) }}">
+                                            Previous
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in emergencies.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != emergencies.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('authority.list_emergencies', page=page_num, status=status_filter) }}">
+                                                    {{ page_num }}
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if emergencies.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('authority.list_emergencies', page=emergencies.next_num, status=status_filter) }}">
+                                            Next
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-exclamation-triangle fa-4x text-muted mb-4"></i>
+                            <h4 class="text-muted">No Emergency Requests Found</h4>
+                            {% if status_filter %}
+                                <p class="text-muted">No emergencies match the selected filter criteria.</p>
+                                <a href="{{ url_for('authority.list_emergencies') }}" class="btn btn-outline-primary">
+                                    View All Emergencies
+                                </a>
+                            {% else %}
+                                <p class="text-muted">You haven't created any emergency requests yet.</p>
+                                <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                                    Create Your First Emergency
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh emergency list every 60 seconds
+    setInterval(function() {
+        // Only refresh if no modals are open
+        if (!document.querySelector('.modal.show')) {
+            location.reload();
+        }
+    }, 60000);
+});
+</script>
+{% endblock %}

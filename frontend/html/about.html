@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}About - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <h1 class="mb-4">About Emergency Response Platform</h1>
+        
+        <p class="lead">
+            The Emergency Response Platform is a comprehensive system designed to connect verified volunteers 
+            with emergency response authorities during disasters and crises.
+        </p>
+        
+        <h3>How It Works</h3>
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <h5>For Volunteers</h5>
+                <ul>
+                    <li>Create a profile with your skills and location</li>
+                    <li>Get your skills verified by administrators</li>
+                    <li>Receive notifications for nearby emergencies</li>
+                    <li>Accept or decline emergency requests</li>
+                    <li>Track your volunteer activity history</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h5>For Authorities</h5>
+                <ul>
+                    <li>Create emergency requests with specific skill requirements</li>
+                    <li>View nearby matched volunteers automatically</li>
+                    <li>Assign volunteers to emergency tasks</li>
+                    <li>Track emergency status and escalate if needed</li>
+                    <li>Manage multiple emergency operations</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h3 class="mt-5">Key Features</h3>
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Location-Based Matching</h6>
+                        <p class="card-text">Intelligent geographic matching finds the closest qualified volunteers.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Skill Verification</h6>
+                        <p class="card-text">Comprehensive verification ensures volunteers have the required expertise.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">Real-Time Updates</h6>
+                        <p class="card-text">Live status updates and notifications for immediate response coordination.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h3 class="mt-5">Emergency Escalation</h3>
+        <p>
+            When emergency requests don't receive volunteer responses within the specified timeframe, 
+            the system automatically escalates the priority and expands the search radius to find 
+            additional qualified volunteers.
+        </p>
+        
+        <h3 class="mt-4">Security & Privacy</h3>
+        <p>
+            All user data is securely stored with encrypted passwords. Role-based access control 
+            ensures users only access features appropriate to their role. Comprehensive activity 
+            logging maintains an audit trail of all system actions.
+        </p>
+    </div>
+</div>
+{% endblock %}

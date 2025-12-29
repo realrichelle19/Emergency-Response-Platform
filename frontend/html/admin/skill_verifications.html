@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Verifications - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Skill Verifications</h1>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="pending" {{ 'selected' if status_filter == 'pending' else '' }}>Pending</option>
+                                <option value="verified" {{ 'selected' if status_filter == 'verified' else '' }}>Verified</option>
+                                <option value="rejected" {{ 'selected' if status_filter == 'rejected' else '' }}>Rejected</option>
+                                <option value="" {{ 'selected' if not status_filter else '' }}>All</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="" {{ 'selected' if not category_filter else '' }}>All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}" {{ 'selected' if category_filter == category else '' }}>
+                                    {{ category.title() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">Filter</button>
+                            <a href="{{ url_for('admin.skill_verifications') }}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">Verification Statistics</h6>
+                    {% if verification_stats.status_breakdown %}
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h5 class="text-warning">{{ verification_stats.status_breakdown.pending or 0 }}</h5>
+                                <small>Pending</small>
+                            </div>
+                            <div class="col-4">
+                                <h5 class="text-success">{{ verification_stats.status_breakdown.verified or 0 }}</h5>
+                                <small>Verified</small>
+                            </div>
+                            <div class="col-4">
+                                <h5 class="text-danger">{{ verification_stats.status_breakdown.rejected or 0 }}</h5>
+                                <small>Rejected</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <p class="text-center mb-0">
+                            <strong>Verification Rate: {{ verification_stats.verification_rate or 0 }}%</strong>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verifications List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        Skill Verification Requests
+                        {% if status_filter %}
+                            - {{ status_filter.title() }}
+                        {% endif %}
+                        {% if category_filter %}
+                            - {{ category_filter.title() }}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if verifications and verifications.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Volunteer</th>
+                                        <th>Skill</th>
+                                        <th>Category</th>
+                                        <th>Status</th>
+                                        <th>Submitted</th>
+                                        <th>Verified By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for verification in verifications.items %}
+                                    <tr>
+                                        <td>
+                                            <div>
+                                                <strong>{{ verification.volunteer_profile.user.full_name }}</strong><br>
+                                                <small class="text-muted">{{ verification.volunteer_profile.user.email }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong>{{ verification.skill.name }}</strong>
+                                            {% if verification.skill.description %}
+                                                <br><small class="text-muted">{{ verification.skill.description[:50] }}...</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ verification.skill.category.title() }}</span>
+                                        </td>
+                                        <td>
+                                            {% if verification.verification_status == 'pending' %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% elif verification.verification_status == 'verified' %}
+                                                <span class="badge bg-success">Verified</span>
+                                            {% elif verification.verification_status == 'rejected' %}
+                                                <span class="badge bg-danger">Rejected</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ verification.created_at.strftime('%Y-%m-%d %H:%M') if verification.created_at else 'Unknown' }}
+                                        </td>
+                                        <td>
+                                            {% if verification.verifier %}
+                                                {{ verification.verifier.full_name }}<br>
+                                                <small class="text-muted">{{ verification.verified_at.strftime('%Y-%m-%d') if verification.verified_at else '' }}</small>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('admin.view_skill_verification', verification_id=verification.id) }}" 
+                                                   class="btn btn-outline-primary" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if verification.verification_status == 'pending' %}
+                                                    <button class="btn btn-success" 
+                                                            onclick="quickVerificationAction({{ verification.id }}, 'approve')"
+                                                            title="Approve">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-danger" 
+                                                            onclick="quickVerificationAction({{ verification.id }}, 'reject')"
+                                                            title="Reject">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if verifications.pages > 1 %}
+                            <nav aria-label="Verification pagination">
+                                <ul class="pagination justify-content-center">
+                                    {% if verifications.has_prev %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.skill_verifications', page=verifications.prev_num, status=status_filter, category=category_filter) }}">Previous</a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for page_num in verifications.iter_pages() %}
+                                        {% if page_num %}
+                                            {% if page_num != verifications.page %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ url_for('admin.skill_verifications', page=page_num, status=status_filter, category=category_filter) }}">{{ page_num }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item active">
+                                                    <span class="page-link">{{ page_num }}</span>
+                                                </li>
+                                            {% endif %}
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <span class="page-link">...</span>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if verifications.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('admin.skill_verifications', page=verifications.next_num, status=status_filter, category=category_filter) }}">Next</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No skill verification requests found</h5>
+                            <p class="text-muted">
+                                {% if status_filter or category_filter %}
+                                    Try adjusting your filters to see more results.
+                                {% else %}
+                                    Skill verification requests will appear here when volunteers submit them.
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Modal -->
+<div class="modal fade" id="quickVerificationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Verification Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="verificationMessage"></p>
+                <div id="rejectionReason" style="display: none;">
+                    <label for="rejectionNotes" class="form-label">Rejection Reason (Required)</label>
+                    <textarea class="form-control" id="rejectionNotes" rows="3" placeholder="Please provide a reason for rejection..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmVerificationAction">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentVerificationId = null;
+let currentAction = null;
+
+function quickVerificationAction(verificationId, action) {
+    currentVerificationId = verificationId;
+    currentAction = action;
+    
+    const modal = new bootstrap.Modal(document.getElementById('quickVerificationModal'));
+    const messageEl = document.getElementById('verificationMessage');
+    const rejectionReasonEl = document.getElementById('rejectionReason');
+    const confirmBtn = document.getElementById('confirmVerificationAction');
+    
+    if (action === 'approve') {
+        messageEl.textContent = 'Are you sure you want to approve this skill verification?';
+        rejectionReasonEl.style.display = 'none';
+        confirmBtn.className = 'btn btn-success';
+        confirmBtn.textContent = 'Approve';
+    } else {
+        messageEl.textContent = 'Are you sure you want to reject this skill verification?';
+        rejectionReasonEl.style.display = 'block';
+        confirmBtn.className = 'btn btn-danger';
+        confirmBtn.textContent = 'Reject';
+    }
+    
+    modal.show();
+}
+
+document.getElementById('confirmVerificationAction').addEventListener('click', function() {
+    const notes = document.getElementById('rejectionNotes').value.trim();
+    
+    if (currentAction === 'reject' && !notes) {
+        alert('Please provide a reason for rejection.');
+        return;
+    }
+    
+    fetch(`/admin/api/skill_verification/${currentVerificationId}/quick_action`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: currentAction,
+            notes: notes
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('quickVerificationModal')).hide();
+});
+</script>
+{% endblock %}

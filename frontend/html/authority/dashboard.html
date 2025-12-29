@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Authority Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Authority Dashboard</h1>
+                <div>
+                    <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                        <i class="fas fa-plus"></i> Create Emergency
+                    </a>
+                    <button id="refresh-stats" class="btn btn-outline-secondary">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ total_emergencies }}</h4>
+                            <p class="card-text">Total Emergencies</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ pending_assignments }}</h4>
+                            <p class="card-text">Pending Responses</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ active_assignments }}</h4>
+                            <p class="card-text">Active Assignments</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ system_stats.get('active_emergencies', 0) }}</h4>
+                            <p class="card-text">System Active</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Emergencies -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Emergencies</h5>
+                    <a href="{{ url_for('authority.list_emergencies') }}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if emergencies %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Volunteers</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emergency in emergencies %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ emergency.title }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'danger' if emergency.priority_level == 'critical' 
+                                                                      else 'warning' if emergency.priority_level == 'high'
+                                                                      else 'info' if emergency.priority_level == 'medium'
+                                                                      else 'secondary' }}">
+                                                {{ emergency.priority_level.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'success' if emergency.status == 'completed'
+                                                                      else 'info' if emergency.status == 'assigned'
+                                                                      else 'warning' if emergency.status == 'open'
+                                                                      else 'secondary' }}">
+                                                {{ emergency.status.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {{ emergency.assignments|length }}/{{ emergency.required_volunteers }}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ emergency.created_at.strftime('%m/%d %H:%M') }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if emergency.status in ['open', 'assigned'] %}
+                                                <a href="{{ url_for('authority.edit_emergency', emergency_id=emergency.id) }}" 
+                                                   class="btn btn-outline-secondary btn-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No emergencies yet</h5>
+                            <p class="text-muted">Create your first emergency request to get started.</p>
+                            <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                                Create Emergency
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Quick Actions -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('authority.create_emergency') }}" class="btn btn-danger">
+                            <i class="fas fa-plus"></i> Create Emergency
+                        </a>
+                        <a href="{{ url_for('authority.list_emergencies') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> View All Emergencies
+                        </a>
+                        <a href="{{ url_for('authority.list_assignments') }}" class="btn btn-outline-info">
+                            <i class="fas fa-users"></i> View Assignments
+                        </a>
+                        <a href="{{ url_for('authority.notifications') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-bell"></i> Notifications
+                        </a>
+                        <a href="{{ url_for('authority.reports') }}" class="btn btn-outline-success">
+                            <i class="fas fa-chart-bar"></i> Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                        <div class="activity-feed">
+                            {% for activity in recent_activity %}
+                            <div class="activity-item mb-3">
+                                <div class="d-flex">
+                                    <div class="activity-icon me-3">
+                                        <i class="fas fa-{{ 'plus' if activity.action == 'emergency_creation'
+                                                           else 'arrow-up' if activity.action == 'emergency_escalation'
+                                                           else 'check' if activity.action == 'emergency_completion'
+                                                           else 'user-plus' if activity.action == 'manual_volunteer_assignment'
+                                                           else 'circle' }} text-muted"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <div class="activity-text">
+                                            {{ activity.action.replace('_', ' ').title() }}
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ activity.created_at.strftime('%m/%d %H:%M') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No recent activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh dashboard stats every 30 seconds
+    setInterval(refreshDashboardStats, 30000);
+    
+    // Manual refresh button
+    document.getElementById('refresh-stats').addEventListener('click', refreshDashboardStats);
+    
+    function refreshDashboardStats() {
+        fetch('{{ url_for("authority.get_dashboard_stats") }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error refreshing stats:', data.error);
+                    return;
+                }
+                
+                // Update emergency counts
+                updateStatCard(0, data.emergencies.open + data.emergencies.assigned + data.emergencies.completed + data.emergencies.cancelled);
+                updateStatCard(1, data.assignments.pending);
+                updateStatCard(2, data.assignments.active);
+                updateStatCard(3, data.emergencies.open + data.emergencies.assigned);
+            })
+            .catch(error => {
+                console.error('Error refreshing dashboard stats:', error);
+            });
+    }
+    
+    function updateStatCard(index, value) {
+        const cards = document.querySelectorAll('.card h4.card-title');
+        if (cards[index]) {
+            cards[index].textContent = value;
+        }
+    }
+});
+</script>
+{% endblock %}

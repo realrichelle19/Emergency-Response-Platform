@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Emergency: {{ emergency.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Emergency Request</h4>
+                    <small class="text-muted">Emergency ID: {{ emergency.id }}</small>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="emergency-form">
+                        <!-- Basic Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="title" class="form-label">Emergency Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ emergency.title }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="priority_level" class="form-label">Priority Level *</label>
+                                <select class="form-select" id="priority_level" name="priority_level" required>
+                                    <option value="low" {{ 'selected' if emergency.priority_level == 'low' }}>Low</option>
+                                    <option value="medium" {{ 'selected' if emergency.priority_level == 'medium' }}>Medium</option>
+                                    <option value="high" {{ 'selected' if emergency.priority_level == 'high' }}>High</option>
+                                    <option value="critical" {{ 'selected' if emergency.priority_level == 'critical' }}>Critical</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" required>{{ emergency.description }}</textarea>
+                        </div>
+
+                        <!-- Location Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="latitude" class="form-label">Latitude *</label>
+                                <input type="number" class="form-control" id="latitude" name="latitude" 
+                                       step="any" value="{{ emergency.latitude }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="longitude" class="form-label">Longitude *</label>
+                                <input type="number" class="form-control" id="longitude" name="longitude" 
+                                       step="any" value="{{ emergency.longitude }}" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="address" name="address"
+                                   value="{{ emergency.address or '' }}">
+                        </div>
+
+                        <!-- Volunteer Requirements -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="required_volunteers" class="form-label">Required Volunteers *</label>
+                                <input type="number" class="form-control" id="required_volunteers" 
+                                       name="required_volunteers" min="1" max="10" 
+                                       value="{{ emergency.required_volunteers }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="search_radius_km" class="form-label">Search Radius (km) *</label>
+                                <input type="number" class="form-control" id="search_radius_km" 
+                                       name="search_radius_km" min="1" max="50" 
+                                       value="{{ emergency.search_radius_km }}" required>
+                            </div>
+                        </div>
+
+                        <!-- Current Status -->
+                        <div class="mb-3">
+                            <label class="form-label">Current Status</label>
+                            <div class="alert alert-info">
+                                <strong>Status:</strong> 
+                                <span class="badge badge-{{ 'success' if emergency.status == 'completed'
+                                                          else 'info' if emergency.status == 'assigned'
+                                                          else 'warning' if emergency.status == 'open'
+                                                          else 'secondary' }}">
+                                    {{ emergency.status.title() }}
+                                </span>
+                                <br>
+                                <strong>Created:</strong> {{ emergency.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% if emergency.escalation_count > 0 %}
+                                <br><strong>Escalations:</strong> {{ emergency.escalation_count }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Required Skills -->
+                        <div class="mb-3">
+                            <label class="form-label">Required Skills</label>
+                            <div class="form-text mb-2">Select skills that volunteers should have for this emergency</div>
+                            {% if skills %}
+                                <div class="row">
+                                    {% for skill in skills %}
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   id="skill_{{ skill.id }}" name="required_skills" 
+                                                   value="{{ skill.id }}"
+                                                   {{ 'checked' if skill in emergency.required_skills }}>
+                                            <label class="form-check-label" for="skill_{{ skill.id }}">
+                                                {{ skill.name }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No skills available in the system.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('authority.view_emergency', emergency_id=emergency.id) }}" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update Emergency
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    document.getElementById('emergency-form').addEventListener('submit', function(e) {
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
+        
+        if (isNaN(lat) || isNaN(lng)) {
+            e.preventDefault();
+            alert('Please provide valid latitude and longitude coordinates.');
+            return;
+        }
+        
+        if (lat < -90 || lat > 90) {
+            e.preventDefault();
+            alert('Latitude must be between -90 and 90 degrees.');
+            return;
+        }
+        
+        if (lng < -180 || lng > 180) {
+            e.preventDefault();
+            alert('Longitude must be between -180 and 180 degrees.');
+            return;
+        }
+    });
+
+    // Priority level styling
+    document.getElementById('priority_level').addEventListener('change', function() {
+        const select = this;
+        select.className = 'form-select';
+        
+        switch(this.value) {
+            case 'critical':
+                select.classList.add('border-danger');
+                break;
+            case 'high':
+                select.classList.add('border-warning');
+                break;
+            case 'medium':
+                select.classList.add('border-info');
+                break;
+            default:
+                select.classList.add('border-secondary');
+        }
+    });
+    
+    // Trigger initial styling
+    document.getElementById('priority_level').dispatchEvent(new Event('change'));
+});
+</script>
+{% endblock %}

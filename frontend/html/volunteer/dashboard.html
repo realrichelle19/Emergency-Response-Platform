@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Dashboard - Emergency Response Platform{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>Volunteer Dashboard</h2>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm availability-toggle 
+                    {{ 'btn-success' if current_user.volunteer_profile and current_user.volunteer_profile.availability_status == 'available' else 'btn-outline-success' }}"
+                    data-status="available">
+                    <i class="fas fa-check-circle me-1"></i>Available
+                </button>
+                <button type="button" class="btn btn-sm availability-toggle
+                    {{ 'btn-warning' if current_user.volunteer_profile and current_user.volunteer_profile.availability_status == 'busy' else 'btn-outline-warning' }}"
+                    data-status="busy">
+                    <i class="fas fa-clock me-1"></i>Busy
+                </button>
+                <button type="button" class="btn btn-sm availability-toggle
+                    {{ 'btn-secondary' if current_user.volunteer_profile and current_user.volunteer_profile.availability_status == 'offline' else 'btn-outline-secondary' }}"
+                    data-status="offline">
+                    <i class="fas fa-times-circle me-1"></i>Offline
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card primary">
+            <h3>{{ stats.verified_skills }}</h3>
+            <p>Verified Skills</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card success">
+            <h3>{{ stats.completed_assignments }}</h3>
+            <p>Completed</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card warning">
+            <h3>{{ stats.pending_assignments }}</h3>
+            <p>Pending</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card danger">
+            <h3>{{ stats.active_assignments }}</h3>
+            <p>Active</p>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Assignments -->
+{% if pending_assignments %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Pending Emergency Requests
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for assignment in pending_assignments %}
+                <div class="emergency-card priority-{{ assignment.emergency_request.priority_level }} mb-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="card-title">
+                                    {{ assignment.emergency_request.title }}
+                                    <span class="badge bg-{{ 'danger' if assignment.emergency_request.priority_level == 'critical' else 'warning' if assignment.emergency_request.priority_level == 'high' else 'info' if assignment.emergency_request.priority_level == 'medium' else 'secondary' }} ms-2">
+                                        {{ assignment.emergency_request.priority_level.title() }}
+                                    </span>
+                                </h6>
+                                <p class="card-text">{{ assignment.emergency_request.description[:200] }}{% if assignment.emergency_request.description|length > 200 %}...{% endif %}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ assignment.emergency_request.address or 'Location provided' }}
+                                    {% if current_user.volunteer_profile %}
+                                        {% set distance = assignment.emergency_request.get_distance_from_volunteer(current_user.volunteer_profile) %}
+                                        {% if distance and distance is not none %}
+                                            <span class="distance-badge ms-2">{{ "%.1f"|format(distance) }} km away</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <small class="text-muted">Requested {{ assignment.assigned_at.strftime('%m/%d/%Y %I:%M %p') }}</small>
+                                </div>
+                                <div class="btn-group-vertical w-100">
+                                    <button class="btn btn-success btn-sm emergency-response" 
+                                            data-assignment-id="{{ assignment.id }}" 
+                                            data-response="accept">
+                                        <i class="fas fa-check me-1"></i>Accept
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm emergency-response" 
+                                            data-assignment-id="{{ assignment.id }}" 
+                                            data-response="decline">
+                                        <i class="fas fa-times me-1"></i>Decline
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Active Assignments -->
+{% if active_assignments %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks text-primary me-2"></i>
+                    Active Assignments
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for assignment in active_assignments %}
+                <div class="emergency-card priority-{{ assignment.emergency_request.priority_level }} mb-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="card-title">
+                                    {{ assignment.emergency_request.title }}
+                                    <span class="badge bg-success ms-2">Active</span>
+                                </h6>
+                                <p class="card-text">{{ assignment.emergency_request.description[:200] }}{% if assignment.emergency_request.description|length > 200 %}...{% endif %}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ assignment.emergency_request.address or 'Location provided' }}
+                                    <br>
+                                    <i class="fas fa-clock me-1"></i>
+                                    Accepted {{ assignment.responded_at.strftime('%m/%d/%Y %I:%M %p') if assignment.responded_at else 'Recently' }}
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button class="btn btn-primary btn-sm w-100 mb-2" 
+                                        onclick="completeAssignment({{ assignment.id }})">
+                                    <i class="fas fa-check-double me-1"></i>Mark Complete
+                                </button>
+                                <small class="text-muted d-block">
+                                    Contact: {{ assignment.emergency_request.authority.phone or assignment.emergency_request.authority.email }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Nearby Emergencies -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-location-arrow text-info me-2"></i>
+                    Nearby Emergencies
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if nearby_emergencies %}
+                    {% for emergency, distance in nearby_emergencies[:3] %}
+                    <div class="border-start-{{ 'danger' if emergency.priority_level == 'critical' else 'warning' if emergency.priority_level == 'high' else 'info' if emergency.priority_level == 'medium' else 'secondary' }} ps-3 mb-3">
+                        <h6 class="mb-1">{{ emergency.title }}</h6>
+                        <p class="mb-1 text-muted small">{{ emergency.description[:100] }}...</p>
+                        <small class="text-muted">
+                            <span class="distance-badge me-2">{{ "%.1f"|format(distance) if distance else "Location TBD" }} {{ "km" if distance else "" }}</span>
+                            <span class="badge bg-{{ 'danger' if emergency.priority_level == 'critical' else 'warning' if emergency.priority_level == 'high' else 'info' if emergency.priority_level == 'medium' else 'secondary' }}">
+                                {{ emergency.priority_level.title() }}
+                            </span>
+                        </small>
+                    </div>
+                    {% endfor %}
+                    {% if nearby_emergencies|length > 3 %}
+                    <div class="text-center">
+                        <a href="{{ url_for('volunteer.nearby_emergencies') }}" class="btn btn-outline-info btn-sm">
+                            View All ({{ nearby_emergencies|length }})
+                        </a>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted text-center">No nearby emergencies requiring your skills</p>
+                    {% if not current_user.volunteer_profile or current_user.volunteer_profile.availability_status != 'available' %}
+                    <small class="text-muted text-center d-block">
+                        Set your status to "Available" to see emergency requests
+                    </small>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history text-secondary me-2"></i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_history %}
+                    {% for assignment in recent_history %}
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="mb-1">{{ assignment.emergency_request.title }}</h6>
+                            <small class="text-muted">
+                                {{ assignment.assigned_at.strftime('%m/%d/%Y') }}
+                            </small>
+                        </div>
+                        <span class="badge status-{{ assignment.status }}">
+                            {{ assignment.status.title() }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{{ url_for('volunteer.history') }}" class="btn btn-outline-secondary btn-sm">
+                            View Full History
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">No activity yet</p>
+                    <small class="text-muted text-center d-block">
+                        Complete your profile to start receiving emergency requests
+                    </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Completion Alert -->
+{% if not current_user.volunteer_profile or not current_user.volunteer_profile.latitude %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>Complete Your Profile
+            </h6>
+            <p class="mb-2">To receive emergency notifications, please complete your volunteer profile with your location and skills.</p>
+            <a href="{{ url_for('volunteer.profile') }}" class="btn btn-info btn-sm">
+                <i class="fas fa-user-edit me-1"></i>Complete Profile
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Complete Assignment Modal -->
+<div class="modal fade" id="completeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Complete Assignment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="completeForm">
+                    <div class="mb-3">
+                        <label for="completionNotes" class="form-label">Completion Notes (Optional)</label>
+                        <textarea class="form-control" id="completionNotes" rows="3" 
+                                placeholder="Describe what was accomplished..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCompletion()">
+                    Mark Complete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentAssignmentId = null;
+
+// Handle availability toggle
+document.querySelectorAll('.availability-toggle').forEach(button => {
+    button.addEventListener('click', async function() {
+        const status = this.getAttribute('data-status');
+        
+        try {
+            const response = await fetch('{{ url_for("volunteer.update_availability") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ status: status })
+            });
+            
+            if (response.ok) {
+                // Update button states
+                document.querySelectorAll('.availability-toggle').forEach(btn => {
+                    btn.classList.remove('btn-success', 'btn-warning', 'btn-secondary');
+                    btn.classList.add('btn-outline-' + btn.getAttribute('data-status') === 'available' ? 'success' : 
+                                     btn.getAttribute('data-status') === 'busy' ? 'warning' : 'secondary');
+                });
+                
+                this.classList.remove('btn-outline-success', 'btn-outline-warning', 'btn-outline-secondary');
+                this.classList.add('btn-' + (status === 'available' ? 'success' : 
+                                            status === 'busy' ? 'warning' : 'secondary'));
+                
+                EmergencyPlatform.Utils.showNotification(`Status updated to ${status}`, 'success');
+                
+                // Refresh page after a short delay to show updated content
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const data = await response.json();
+                EmergencyPlatform.Utils.showNotification(data.error || 'Failed to update status', 'danger');
+            }
+        } catch (error) {
+            EmergencyPlatform.Utils.showNotification('Network error occurred', 'danger');
+        }
+    });
+});
+
+// Handle emergency response
+document.querySelectorAll('.emergency-response').forEach(button => {
+    button.addEventListener('click', async function() {
+        const assignmentId = this.getAttribute('data-assignment-id');
+        const response = this.getAttribute('data-response');
+        
+        if (!confirm(`Are you sure you want to ${response} this emergency request?`)) {
+            return;
+        }
+        
+        try {
+            const result = await fetch(`{{ url_for("volunteer.respond_to_assignment", assignment_id=0) }}`.replace('0', assignmentId), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ response: response })
+            });
+            
+            if (result.ok) {
+                EmergencyPlatform.Utils.showNotification(`Emergency request ${response}ed successfully`, 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const data = await result.json();
+                EmergencyPlatform.Utils.showNotification(data.error || 'Failed to respond', 'danger');
+            }
+        } catch (error) {
+            EmergencyPlatform.Utils.showNotification('Network error occurred', 'danger');
+        }
+    });
+});
+
+function completeAssignment(assignmentId) {
+    currentAssignmentId = assignmentId;
+    const modal = new bootstrap.Modal(document.getElementById('completeModal'));
+    modal.show();
+}
+
+async function submitCompletion() {
+    if (!currentAssignmentId) return;
+    
+    const notes = document.getElementById('completionNotes').value;
+    
+    try {
+        const response = await fetch(`{{ url_for("volunteer.complete_assignment", assignment_id=0) }}`.replace('0', currentAssignmentId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ notes: notes })
+        });
+        
+        if (response.ok) {
+            EmergencyPlatform.Utils.showNotification('Assignment marked as completed', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('completeModal')).hide();
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            const data = await response.json();
+            EmergencyPlatform.Utils.showNotification(data.error || 'Failed to complete assignment', 'danger');
+        }
+    } catch (error) {
+        EmergencyPlatform.Utils.showNotification('Network error occurred', 'danger');
+    }
+}
+
+// Auto-refresh dashboard every 30 seconds
+setInterval(() => {
+    // Only refresh if no modals are open
+    if (!document.querySelector('.modal.show')) {
+        window.location.reload();
+    }
+}, 30000);
+</script>
+{% endblock %}
