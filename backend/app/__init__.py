@@ -19,9 +19,6 @@ def create_app(config_name='default'):
                 static_folder='../../frontend')
     app.config.from_object(config[config_name])
     
-    # Initialize configuration
-    config[config_name].init_app(app)
-    
     # JWT Configuration
     app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # 1 hour
@@ -33,6 +30,17 @@ def create_app(config_name='default'):
     login_manager.init_app(app)
     jwt.init_app(app)
     CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5500', 'http://localhost:5500'])  # Allow frontend
+    
+    # Initialize database for production
+    if config_name == 'production':
+        with app.app_context():
+            db.create_all()
+            
+            # Initialize with sample data if database is empty
+            from app.models import User
+            if User.query.count() == 0:
+                from scripts.create_sample_data import create_sample_data
+                create_sample_data()
     
     # Configure login manager
     login_manager.login_view = 'auth.login'

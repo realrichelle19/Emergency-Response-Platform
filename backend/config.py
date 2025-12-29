@@ -48,22 +48,6 @@ class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///emergency_response_prod.db'
-    
-    # Render-specific configuration
-    @staticmethod
-    def init_app(app):
-        Config.init_app(app)
-        
-        # Create database tables on startup
-        with app.app_context():
-            from app import db
-            db.create_all()
-            
-            # Initialize with sample data if database is empty
-            from app.models import User
-            if User.query.count() == 0:
-                from scripts.create_sample_data import create_sample_data
-                create_sample_data()
 
 config = {
     'development': DevelopmentConfig,
